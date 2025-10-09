@@ -1,19 +1,20 @@
-COMPOSE := docker compose -f docker-compose.yaml
+APP_COMPOSE := docker compose --env-file .env -f docker-compose/db.yaml -f docker-compose/rabbitmq.yaml -f docker-compose/app.yaml
+DB_COMPOSE := docker compose --env-file .env -f docker-compose/db.yaml
 
 .PHONY: app app-down app-build app-restart app-db
 
 app:
-	$(COMPOSE) up -d
+	$(APP_COMPOSE) up -d
 
 app-down:
-	$(COMPOSE) down
+	$(APP_COMPOSE) down
 
 app-build:
-	$(COMPOSE) build
+	$(APP_COMPOSE) build
 
 app-restart:
-	$(COMPOSE) down
-	$(COMPOSE) up -d
+	$(APP_COMPOSE) down
+	$(APP_COMPOSE) up -d
 
 app-db:
-	$(COMPOSE) up -d postgres
+	$(DB_COMPOSE) up -d

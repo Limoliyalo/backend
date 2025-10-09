@@ -27,6 +27,18 @@ class RedisSettings(BaseModel):
     password: str
 
 
+class RabbitSettings(BaseModel):
+    host: str
+    port: int
+    management_port: int
+    user: str
+    password: str
+
+    @property
+    def amqp_url(self) -> str:
+        return f"amqp://{self.user}:{self.password}@{self.host}:{self.port}/"
+
+
 class Settings(BaseSettings):
     db_host: str
     db_port: int
@@ -36,8 +48,16 @@ class Settings(BaseSettings):
     db_echo: bool = False
 
     redis_host: str
-    redis_port: str
+    redis_port: int
     redis_password: str | None
+
+    rabbit_host: str
+    rabbit_port: int
+    rabbit_web_port: int
+    rabbit_user: str
+    rabbit_password: str
+    rabbitmq_default_user: str | None = None
+    rabbitmq_default_pass: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -61,6 +81,16 @@ class Settings(BaseSettings):
             host=self.redis_host,
             port=self.redis_port,
             password=self.redis_password,
+        )
+
+    @property
+    def rabbitmq(self) -> RabbitSettings:
+        return RabbitSettings(
+            host=self.rabbit_host,
+            port=self.rabbit_port,
+            management_port=self.rabbit_web_port,
+            user=self.rabbit_user,
+            password=self.rabbit_password,
         )
 
 

@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: sh -c "alembic upgrade head && uvicorn src.app:app --host 0.0.0.0 --port 8000"
+    container_name: healthity-backend-app
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ..:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - backend_network
+      - rabbitmq_network
+
+networks:
+  backend_network:
+    name: healthity_backend_net
+  rabbitmq_network:
+    name: healthity_rabbit_net

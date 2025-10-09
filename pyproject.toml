@@ -1,6 +1,6 @@
 [project]
-name = "save-your-back-backend"
-version = "0.1.0"
+name = "healthity-backend-service"
+version = "1.0.0"
 description = ""
 authors = [
     {name = "NEZuko1337",email = "zuko13371@yandex.ru"}

@@ -1,0 +1,27 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: healthity-rabbitmq
+    env_file:
+      - ../.env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "127.0.0.1:${RABBIT_PORT}:5672"
+      - "127.0.0.1:${RABBIT_WEB_PORT}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_logs:/var/log/rabbitmq
+    networks:
+      - rabbitmq_network
+
+volumes:
+  rabbitmq_data:
+    name: healthity_rabbitmq_data
+  rabbitmq_logs:
+    name: healthity_rabbitmq_logs
+
+networks:
+  rabbitmq_network:
+    name: healthity_rabbit_net
