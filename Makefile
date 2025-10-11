@@ -1,7 +1,7 @@
 APP_COMPOSE := docker compose --env-file .env -f docker-compose/db.yaml -f docker-compose/rabbitmq.yaml -f docker-compose/app.yaml
 DB_COMPOSE := docker compose --env-file .env -f docker-compose/db.yaml
 
-.PHONY: app app-down app-build app-restart app-db
+.PHONY: app app-down app-build app-build-no-cache app-restart app-db
 
 app:
 	$(APP_COMPOSE) up -d
@@ -11,6 +11,9 @@ app-down:
 
 app-build:
 	$(APP_COMPOSE) build
+
+app-build-no-cache:
+	$(APP_COMPOSE) build --no-cache
 
 app-restart:
 	$(APP_COMPOSE) down

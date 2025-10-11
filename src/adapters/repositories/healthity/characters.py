@@ -35,11 +35,25 @@ class SQLAlchemyCharactersRepository(
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
+    async def get_by_id(self, character_id: uuid.UUID) -> Character | None:
+        model = await super().get(character_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def get_by_user(self, user_tg_id: TelegramId) -> Character | None:
         model = await self.first(filters={"user_tg_id": user_tg_id.value})
         if model is None:
             return None
         return self._to_domain(model)
+
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[Character]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(CharacterModel).limit(limit).offset(offset)
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
 
     async def add(self, character: Character) -> Character:
         model = CharacterModel(
@@ -71,6 +85,13 @@ class SQLAlchemyCharactersRepository(
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def delete(self, character_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(CharacterModel, character_id)
+            if model is None:
+                raise RepositoryError("Character not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: CharacterModel) -> Character:

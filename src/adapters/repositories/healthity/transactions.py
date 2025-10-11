@@ -1,7 +1,7 @@
 from collections.abc import Callable
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from src.adapters.database.models.transactions import TransactionModel
 from src.adapters.database.uow import AbstractUnitOfWork
@@ -49,6 +49,26 @@ class SQLAlchemyTransactionsRepository(
         if model is None:
             return None
         return self._to_domain(model)
+
+    async def update(self, transaction: Transaction) -> Transaction:
+        async with self._uow() as uow:
+            model = await uow.session.get(TransactionModel, transaction.id)
+            if model is None:
+                raise ValueError("Transaction not found")
+
+            model.amount = transaction.amount
+            model.type = transaction.type
+            model.description = transaction.description
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, transaction_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            await uow.session.execute(
+                delete(TransactionModel).where(TransactionModel.id == transaction_id)
+            )
 
     @staticmethod
     def _to_domain(model: TransactionModel) -> Transaction:

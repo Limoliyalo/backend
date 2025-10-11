@@ -49,8 +49,15 @@ class InsufficientLevelException(DomainException):
         super().__init__(self.message)
 
 
-class UserNotFoundException(DomainException):
+class EntityNotFoundException(DomainException):
+    """Базовое исключение когда сущность не найдена"""
+
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
+class UserNotFoundException(EntityNotFoundException):
     def __init__(self, tg_id: int):
         self.tg_id = tg_id
-        self.message = f"User with tg_id {tg_id} not found"
-        super().__init__(self.message)
+        super().__init__(f"User with tg_id {tg_id} not found")

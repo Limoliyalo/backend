@@ -15,3 +15,11 @@ class UsersRepository(ABC):
     @abstractmethod
     async def update(self, user: User) -> User:
         raise NotImplementedError
+
+    @abstractmethod
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[User]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, telegram_id: TelegramId) -> None:
+        raise NotImplementedError

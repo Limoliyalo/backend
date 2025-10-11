@@ -56,5 +56,19 @@ class MoodHistoryRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def list_for_character(
+        self, character_id: uuid.UUID, limit: int = 100
+    ) -> list[MoodHistory]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, mood_id: uuid.UUID) -> MoodHistory | None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def add(self, mood: MoodHistory) -> MoodHistory:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, mood_id: uuid.UUID) -> None:
         raise NotImplementedError

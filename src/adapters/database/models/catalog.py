@@ -91,6 +91,7 @@ class BackgroundModel(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    color: Mapped[str | None] = mapped_column(String(30), nullable=True)
     cost: Mapped[int] = mapped_column(Integer, nullable=False)
     required_level: Mapped[int] = mapped_column(
         Integer,
