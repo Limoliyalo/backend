@@ -20,14 +20,108 @@ from src.adapters.repositories.healthity import (
     SQLAlchemyUsersRepository,
 )
 from src.core.settings import settings
-from src.use_cases.users.get_user import GetUserUseCase
-from src.use_cases.users.upsert_user import UpsertUserUseCase
+from src.core.security import PasswordHasher
+from src.use_cases.users.manage_users import (
+    GetUserUseCase,
+    CreateUserUseCase,
+    ListUsersUseCase,
+    UpdateUserUseCase,
+    DeleteUserUseCase,
+    DepositBalanceUseCase,
+    WithdrawBalanceUseCase,
+)
+from src.use_cases.characters.create_character import CreateCharacterUseCase
+from src.use_cases.characters.get_character import (
+    GetCharacterByIdUseCase,
+    GetCharacterByUserUseCase,
+    ListCharactersUseCase,
+)
+from src.use_cases.characters.update_character import UpdateCharacterUseCase
+from src.use_cases.characters.delete_character import DeleteCharacterUseCase
+from src.use_cases.items.manage_items import (
+    CreateItemUseCase,
+    GetItemUseCase,
+    ListItemsUseCase,
+    ListAvailableItemsUseCase,
+    UpdateItemUseCase,
+    DeleteItemUseCase,
+)
+from src.use_cases.backgrounds.manage_backgrounds import (
+    CreateBackgroundUseCase,
+    GetBackgroundUseCase,
+    ListBackgroundsUseCase,
+    ListAvailableBackgroundsUseCase,
+    UpdateBackgroundUseCase,
+    DeleteBackgroundUseCase,
+)
+from src.use_cases.transactions.manage_transactions import (
+    CreateTransactionUseCase,
+    GetTransactionUseCase,
+    ListTransactionsForUserUseCase,
+)
+from src.use_cases.user_settings.manage_settings import (
+    GetUserSettingsUseCase,
+    UpsertUserSettingsUseCase,
+)
+from src.use_cases.activity_types.manage_activity_types import (
+    CreateActivityTypeUseCase,
+    GetActivityTypeByNameUseCase,
+    ListActivityTypesUseCase,
+)
+from src.use_cases.daily_activities.manage_daily_activities import (
+    CreateDailyActivityUseCase,
+    ListDailyActivitiesForDayUseCase,
+)
+from src.use_cases.daily_progress.manage_daily_progress import (
+    CreateDailyProgressUseCase,
+    GetDailyProgressForDayUseCase,
+)
+from src.use_cases.mood_history.manage_mood_history import (
+    CreateMoodHistoryUseCase,
+    ListMoodHistoryForCharacterUseCase,
+    GetMoodHistoryUseCase,
+    DeleteMoodHistoryUseCase,
+)
+from src.use_cases.user_friends.manage_user_friends import (
+    ListUserFriendsUseCase,
+    AddFriendUseCase,
+    RemoveFriendUseCase,
+)
+from src.use_cases.character_items.manage_character_items import (
+    ListCharacterItemsUseCase,
+    PurchaseItemUseCase,
+    EquipItemUseCase,
+    UnequipItemUseCase,
+    RemoveCharacterItemUseCase,
+)
+from src.use_cases.character_backgrounds.manage_character_backgrounds import (
+    ListCharacterBackgroundsUseCase,
+    PurchaseBackgroundUseCase,
+    ActivateBackgroundUseCase,
+    DeactivateBackgroundUseCase,
+    RemoveCharacterBackgroundUseCase,
+)
+from src.use_cases.item_categories.manage_item_categories import (
+    ListItemCategoriesUseCase,
+    GetItemCategoryUseCase,
+    CreateItemCategoryUseCase,
+    UpdateItemCategoryUseCase,
+    DeleteItemCategoryUseCase,
+)
+from src.use_cases.item_background_positions.manage_positions import (
+    ListPositionsForItemUseCase,
+    GetPositionUseCase,
+    CreatePositionUseCase,
+    UpdatePositionUseCase,
+    DeletePositionUseCase,
+)
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
     wiring_config = containers.WiringConfiguration(packages=["src.drivers.rest"])
 
     settings_provider = providers.Object(settings)
+    password_hasher = providers.Singleton(PasswordHasher)
 
     session_factory = providers.Object(session_manager.async_session)
     unit_of_work = providers.Factory(
@@ -80,9 +174,240 @@ class ApplicationContainer(containers.DeclarativeContainer):
         SQLAlchemyTransactionsRepository, uow_factory=unit_of_work.provider
     )
 
+    # User use cases
     get_user_use_case = providers.Factory(
         GetUserUseCase, users_repository=users_repository
     )
-    upsert_user_use_case = providers.Factory(
-        UpsertUserUseCase, users_repository=users_repository
+    create_user_use_case = providers.Factory(
+        CreateUserUseCase,
+        users_repository=users_repository,
+        password_hasher=password_hasher,
+    )
+    list_users_use_case = providers.Factory(
+        ListUsersUseCase, users_repository=users_repository
+    )
+    update_user_use_case = providers.Factory(
+        UpdateUserUseCase,
+        users_repository=users_repository,
+        password_hasher=password_hasher,
+    )
+    delete_user_use_case = providers.Factory(
+        DeleteUserUseCase, users_repository=users_repository
+    )
+    deposit_balance_use_case = providers.Factory(
+        DepositBalanceUseCase, users_repository=users_repository
+    )
+    withdraw_balance_use_case = providers.Factory(
+        WithdrawBalanceUseCase, users_repository=users_repository
+    )
+
+    # Character use cases
+    create_character_use_case = providers.Factory(
+        CreateCharacterUseCase, characters_repository=characters_repository
+    )
+    get_character_by_id_use_case = providers.Factory(
+        GetCharacterByIdUseCase, characters_repository=characters_repository
+    )
+    get_character_by_user_use_case = providers.Factory(
+        GetCharacterByUserUseCase, characters_repository=characters_repository
+    )
+    list_characters_use_case = providers.Factory(
+        ListCharactersUseCase, characters_repository=characters_repository
+    )
+    update_character_use_case = providers.Factory(
+        UpdateCharacterUseCase, characters_repository=characters_repository
+    )
+    delete_character_use_case = providers.Factory(
+        DeleteCharacterUseCase, characters_repository=characters_repository
+    )
+
+    # Item use cases
+    create_item_use_case = providers.Factory(
+        CreateItemUseCase, items_repository=items_repository
+    )
+    get_item_use_case = providers.Factory(
+        GetItemUseCase, items_repository=items_repository
+    )
+    list_items_use_case = providers.Factory(
+        ListItemsUseCase, items_repository=items_repository
+    )
+    list_available_items_use_case = providers.Factory(
+        ListAvailableItemsUseCase, items_repository=items_repository
+    )
+    update_item_use_case = providers.Factory(
+        UpdateItemUseCase, items_repository=items_repository
+    )
+    delete_item_use_case = providers.Factory(
+        DeleteItemUseCase, items_repository=items_repository
+    )
+
+    # Background use cases
+    create_background_use_case = providers.Factory(
+        CreateBackgroundUseCase, backgrounds_repository=backgrounds_repository
+    )
+    get_background_use_case = providers.Factory(
+        GetBackgroundUseCase, backgrounds_repository=backgrounds_repository
+    )
+    list_backgrounds_use_case = providers.Factory(
+        ListBackgroundsUseCase, backgrounds_repository=backgrounds_repository
+    )
+    list_available_backgrounds_use_case = providers.Factory(
+        ListAvailableBackgroundsUseCase, backgrounds_repository=backgrounds_repository
+    )
+    update_background_use_case = providers.Factory(
+        UpdateBackgroundUseCase, backgrounds_repository=backgrounds_repository
+    )
+    delete_background_use_case = providers.Factory(
+        DeleteBackgroundUseCase, backgrounds_repository=backgrounds_repository
+    )
+
+    # Transaction use cases
+    create_transaction_use_case = providers.Factory(
+        CreateTransactionUseCase, transactions_repository=transactions_repository
+    )
+    get_transaction_use_case = providers.Factory(
+        GetTransactionUseCase, transactions_repository=transactions_repository
+    )
+    list_transactions_for_user_use_case = providers.Factory(
+        ListTransactionsForUserUseCase, transactions_repository=transactions_repository
+    )
+
+    # User settings use cases
+    get_user_settings_use_case = providers.Factory(
+        GetUserSettingsUseCase, settings_repository=user_settings_repository
+    )
+    upsert_user_settings_use_case = providers.Factory(
+        UpsertUserSettingsUseCase, settings_repository=user_settings_repository
+    )
+
+    # Activity Types use cases
+    create_activity_type_use_case = providers.Factory(
+        CreateActivityTypeUseCase, activity_types_repository=activity_types_repository
+    )
+    get_activity_type_by_name_use_case = providers.Factory(
+        GetActivityTypeByNameUseCase,
+        activity_types_repository=activity_types_repository,
+    )
+    list_activity_types_use_case = providers.Factory(
+        ListActivityTypesUseCase, activity_types_repository=activity_types_repository
+    )
+
+    # Daily Activities use cases
+    create_daily_activity_use_case = providers.Factory(
+        CreateDailyActivityUseCase,
+        daily_activities_repository=daily_activities_repository,
+    )
+    list_daily_activities_for_day_use_case = providers.Factory(
+        ListDailyActivitiesForDayUseCase,
+        daily_activities_repository=daily_activities_repository,
+    )
+
+    # Daily Progress use cases
+    create_daily_progress_use_case = providers.Factory(
+        CreateDailyProgressUseCase, daily_progress_repository=daily_progress_repository
+    )
+    get_daily_progress_for_day_use_case = providers.Factory(
+        GetDailyProgressForDayUseCase,
+        daily_progress_repository=daily_progress_repository,
+    )
+
+    # Mood History use cases
+    create_mood_history_use_case = providers.Factory(
+        CreateMoodHistoryUseCase, mood_history_repository=mood_history_repository
+    )
+    list_mood_history_for_character_use_case = providers.Factory(
+        ListMoodHistoryForCharacterUseCase,
+        mood_history_repository=mood_history_repository,
+    )
+    get_mood_history_use_case = providers.Factory(
+        GetMoodHistoryUseCase, mood_history_repository=mood_history_repository
+    )
+    delete_mood_history_use_case = providers.Factory(
+        DeleteMoodHistoryUseCase, mood_history_repository=mood_history_repository
+    )
+
+    # User Friends use cases
+    list_user_friends_use_case = providers.Factory(
+        ListUserFriendsUseCase, user_friends_repository=user_friends_repository
+    )
+    add_friend_use_case = providers.Factory(
+        AddFriendUseCase, user_friends_repository=user_friends_repository
+    )
+    remove_friend_use_case = providers.Factory(
+        RemoveFriendUseCase, user_friends_repository=user_friends_repository
+    )
+
+    # Character Items use cases
+    list_character_items_use_case = providers.Factory(
+        ListCharacterItemsUseCase, character_items_repository=character_items_repository
+    )
+    purchase_item_use_case = providers.Factory(
+        PurchaseItemUseCase, character_items_repository=character_items_repository
+    )
+    equip_item_use_case = providers.Factory(
+        EquipItemUseCase, character_items_repository=character_items_repository
+    )
+    unequip_item_use_case = providers.Factory(
+        UnequipItemUseCase, character_items_repository=character_items_repository
+    )
+    remove_character_item_use_case = providers.Factory(
+        RemoveCharacterItemUseCase,
+        character_items_repository=character_items_repository,
+    )
+
+    # Character Backgrounds use cases
+    list_character_backgrounds_use_case = providers.Factory(
+        ListCharacterBackgroundsUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    purchase_background_use_case = providers.Factory(
+        PurchaseBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    activate_background_use_case = providers.Factory(
+        ActivateBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    deactivate_background_use_case = providers.Factory(
+        DeactivateBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    remove_character_background_use_case = providers.Factory(
+        RemoveCharacterBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+
+    # Item Categories use cases
+    list_item_categories_use_case = providers.Factory(
+        ListItemCategoriesUseCase, item_categories_repository=item_categories_repository
+    )
+    get_item_category_use_case = providers.Factory(
+        GetItemCategoryUseCase, item_categories_repository=item_categories_repository
+    )
+    create_item_category_use_case = providers.Factory(
+        CreateItemCategoryUseCase, item_categories_repository=item_categories_repository
+    )
+    update_item_category_use_case = providers.Factory(
+        UpdateItemCategoryUseCase, item_categories_repository=item_categories_repository
+    )
+    delete_item_category_use_case = providers.Factory(
+        DeleteItemCategoryUseCase, item_categories_repository=item_categories_repository
+    )
+
+    # Item Background Positions use cases
+    list_positions_for_item_use_case = providers.Factory(
+        ListPositionsForItemUseCase,
+        positions_repository=item_background_positions_repository,
+    )
+    get_position_use_case = providers.Factory(
+        GetPositionUseCase, positions_repository=item_background_positions_repository
+    )
+    create_position_use_case = providers.Factory(
+        CreatePositionUseCase, positions_repository=item_background_positions_repository
+    )
+    update_position_use_case = providers.Factory(
+        UpdatePositionUseCase, positions_repository=item_background_positions_repository
+    )
+    delete_position_use_case = providers.Factory(
+        DeletePositionUseCase, positions_repository=item_background_positions_repository
     )

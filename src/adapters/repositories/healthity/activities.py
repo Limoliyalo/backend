@@ -2,7 +2,7 @@ from collections.abc import Callable
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from src.adapters.database.models.activities import (
     ActivityTypeModel,
@@ -200,6 +200,25 @@ class SQLAlchemyMoodHistoryRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
+    async def list_for_character(
+        self, character_id: uuid.UUID, limit: int = 100
+    ) -> list[MoodHistory]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(MoodHistoryModel)
+                .where(MoodHistoryModel.character_id == character_id)
+                .order_by(MoodHistoryModel.timestamp.desc())
+                .limit(limit)
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_id(self, mood_id: uuid.UUID) -> MoodHistory | None:
+        model = await self.first(filters={"id": mood_id})
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def add(self, mood: MoodHistory) -> MoodHistory:
         model = MoodHistoryModel(
             id=mood.id,
@@ -210,6 +229,12 @@ class SQLAlchemyMoodHistoryRepository(
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
+
+    async def delete(self, mood_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            await uow.session.execute(
+                delete(MoodHistoryModel).where(MoodHistoryModel.id == mood_id)
+            )
 
     @staticmethod
     def _to_domain(model: MoodHistoryModel) -> MoodHistory:

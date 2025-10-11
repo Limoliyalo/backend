@@ -12,7 +12,15 @@ from src.domain.value_objects.telegram_id import TelegramId
 
 class CharactersRepository(ABC):
     @abstractmethod
+    async def get_by_id(self, character_id: uuid.UUID) -> Character | None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def get_by_user(self, user_tg_id: TelegramId) -> Character | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[Character]:
         raise NotImplementedError
 
     @abstractmethod
@@ -21,6 +29,10 @@ class CharactersRepository(ABC):
 
     @abstractmethod
     async def update(self, character: Character) -> Character:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, character_id: uuid.UUID) -> None:
         raise NotImplementedError
 
 

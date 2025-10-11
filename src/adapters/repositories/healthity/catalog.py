@@ -1,6 +1,8 @@
 from collections.abc import Callable
 import uuid
 
+from sqlalchemy import select
+
 from src.adapters.database.models.catalog import (
     BackgroundModel,
     ItemCategoryModel,
@@ -35,6 +37,12 @@ class SQLAlchemyItemCategoriesRepository(
             return None
         return self._to_domain(model)
 
+    async def get_by_id(self, category_id: uuid.UUID) -> ItemCategory | None:
+        model = await super().get(category_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def add(self, category: ItemCategory) -> ItemCategory:
         model = ItemCategoryModel(
             id=category.id,
@@ -44,6 +52,13 @@ class SQLAlchemyItemCategoriesRepository(
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
+
+    async def delete(self, category_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(ItemCategoryModel, category_id)
+            if model is None:
+                raise RepositoryError("Item category not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: ItemCategoryModel) -> ItemCategory:
@@ -69,6 +84,14 @@ class SQLAlchemyItemsRepository(SQLAlchemyRepository[ItemModel], ItemsRepository
 
     async def list_by_category(self, category_id: uuid.UUID) -> list[Item]:
         models = await self.list(filters={"category_id": category_id})
+        return [self._to_domain(model) for model in models]
+
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[Item]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(ItemModel).limit(limit).offset(offset)
+            )
+            models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
     async def list_available(self) -> list[Item]:
@@ -107,6 +130,13 @@ class SQLAlchemyItemsRepository(SQLAlchemyRepository[ItemModel], ItemsRepository
             await uow.session.refresh(model)
             return self._to_domain(model)
 
+    async def delete(self, item_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(ItemModel, item_id)
+            if model is None:
+                raise RepositoryError("Item not found")
+            await uow.session.delete(model)
+
     @staticmethod
     def _to_domain(model: ItemModel) -> Item:
         return Item(
@@ -135,6 +165,14 @@ class SQLAlchemyBackgroundsRepository(
         if model is None:
             return None
         return self._to_domain(model)
+
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[Background]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(BackgroundModel).limit(limit).offset(offset)
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
 
     async def list_available(self) -> list[Background]:
         models = await self.list(filters={"is_available": True})
@@ -168,6 +206,13 @@ class SQLAlchemyBackgroundsRepository(
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def delete(self, background_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(BackgroundModel, background_id)
+            if model is None:
+                raise RepositoryError("Background not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: BackgroundModel) -> Background:

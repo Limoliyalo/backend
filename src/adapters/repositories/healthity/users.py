@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 
 from sqlalchemy import delete, select
@@ -121,8 +122,19 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
 
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     async def create(self, user: User) -> User:
+        self.logger.debug({
+            "action": "SQLAlchemyUsersRepository.create",
+            "stage": "start",
+            "data": {
+                "telegram_id": user.telegram_id.value,
+                "is_active": user.is_active,
+                "balance": user.balance
+            }
+        })
+        
         model = UserModel(
             tg_id=user.telegram_id.value,
             password_hash=user.password_hash,
@@ -130,21 +142,60 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             balance=user.balance,
         )
         saved = await self.add(model)
+        
+        self.logger.info({
+            "action": "SQLAlchemyUsersRepository.create",
+            "stage": "end",
+            "data": {"telegram_id": user.telegram_id.value}
+        })
         return self._to_domain(saved)
 
     async def get_by_telegram_id(self, telegram_id: TelegramId) -> User | None:
+        self.logger.debug({
+            "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
+            "stage": "start",
+            "data": {"telegram_id": telegram_id.value}
+        })
+        
         model = await self.first(filters={"tg_id": telegram_id.value})
+        
         if model is None:
+            self.logger.debug({
+                "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
+                "stage": "not_found",
+                "data": {"telegram_id": telegram_id.value}
+            })
             return None
+        
+        self.logger.debug({
+            "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
+            "stage": "end",
+            "data": {"telegram_id": telegram_id.value, "found": True}
+        })
         return self._to_domain(model)
 
     async def update(self, user: User) -> User:
+        self.logger.debug({
+            "action": "SQLAlchemyUsersRepository.update",
+            "stage": "start",
+            "data": {
+                "telegram_id": user.telegram_id.value,
+                "is_active": user.is_active,
+                "balance": user.balance
+            }
+        })
+        
         async with self._uow() as uow:
             result = await uow.session.execute(
                 select(UserModel).where(UserModel.tg_id == user.telegram_id.value)
             )
             model = result.scalar_one_or_none()
             if model is None:
+                self.logger.error({
+                    "action": "SQLAlchemyUsersRepository.update",
+                    "stage": "not_found",
+                    "data": {"telegram_id": user.telegram_id.value}
+                })
                 raise RepositoryError("User does not exist")
 
             model.password_hash = user.password_hash
@@ -153,7 +204,29 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
 
             await uow.session.flush()
             await uow.session.refresh(model)
+            
+            self.logger.info({
+                "action": "SQLAlchemyUsersRepository.update",
+                "stage": "end",
+                "data": {"telegram_id": user.telegram_id.value}
+            })
             return self._to_domain(model)
+
+    async def list_all(self, limit: int = 100, offset: int = 0) -> list[User]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(UserModel).limit(limit).offset(offset)
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def delete(self, telegram_id: TelegramId) -> None:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                delete(UserModel).where(UserModel.tg_id == telegram_id.value)
+            )
+            if result.rowcount == 0:
+                raise RepositoryError("User not found")
 
     @staticmethod
     def _to_domain(model: UserModel) -> User:
