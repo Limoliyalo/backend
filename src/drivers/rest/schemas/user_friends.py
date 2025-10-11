@@ -16,6 +16,10 @@ class UserFriendCreate(BaseModel):
     friend_tg_id: int
 
 
+class UserFriendUpdate(BaseModel):
+    friend_tg_id: int
+
+
 class UserFriendResponse(UserFriendBase):
     id: UUID
     created_at: datetime

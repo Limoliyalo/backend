@@ -55,6 +55,18 @@ class SQLAlchemyUserSettingsRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
+    async def list_all(self) -> list[UserSettings]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(select(UserSettingsModel))
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def delete(self, settings_id) -> None:
+        async with self._uow() as uow:
+            await uow.session.execute(
+                delete(UserSettingsModel).where(UserSettingsModel.id == settings_id)
+            )
+
     @staticmethod
     def _to_domain(model: UserSettingsModel) -> UserSettings:
         return UserSettings(
@@ -107,6 +119,25 @@ class SQLAlchemyUserFriendsRepository(
             if result.rowcount == 0:
                 raise RepositoryError("Friend linkage not found")
 
+    async def get_by_id(self, friend_id) -> UserFriend | None:
+        async with self._uow() as uow:
+            model = await uow.session.get(UserFriendModel, friend_id)
+            if model is None:
+                return None
+            return self._to_domain(model)
+
+    async def update(self, friend: UserFriend) -> UserFriend:
+        async with self._uow() as uow:
+            model = await uow.session.get(UserFriendModel, friend.id)
+            if model is None:
+                raise ValueError("UserFriend not found")
+
+            model.friend_tg_id = friend.friend_tg_id.value
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
     @staticmethod
     def _to_domain(model: UserFriendModel) -> UserFriend:
         return UserFriend(
@@ -141,6 +172,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             tg_id=user.telegram_id.value,
             password_hash=user.password_hash,
             is_active=user.is_active,
+            is_admin=user.is_admin,
             balance=user.balance,
         )
         saved = await self.add(model)
@@ -215,6 +247,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             model.password_hash = user.password_hash
             model.is_active = user.is_active
             model.balance = user.balance
+            # is_admin не обновляется через обычный update - только из БД напрямую
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -250,6 +283,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             telegram_id=TelegramId(model.tg_id),
             password_hash=model.password_hash,
             is_active=model.is_active,
+            is_admin=model.is_admin,
             balance=model.balance,
             created_at=model.created_at,
             updated_at=model.updated_at,

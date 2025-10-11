@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
     container = ApplicationContainer()
-    container.wire(packages=["src.drivers.rest"])
+    container.wire(packages=["src.drivers.rest", "src.core.auth"])
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
+from src.core.auth import get_admin_user
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.catalog import (
@@ -16,50 +17,39 @@ from src.use_cases.backgrounds.manage_backgrounds import (
     CreateBackgroundUseCase,
     DeleteBackgroundUseCase,
     GetBackgroundUseCase,
-    ListAvailableBackgroundsUseCase,
     ListBackgroundsUseCase,
     UpdateBackgroundInput,
     UpdateBackgroundUseCase,
 )
 
-router = APIRouter(prefix="/backgrounds", tags=["backgrounds"])
+router = APIRouter(prefix="/backgrounds", tags=["Backgrounds"])
 
 
-@router.get("/", response_model=list[BackgroundResponse])
+@router.get("/admin", response_model=list[BackgroundResponse])
 @inject
 async def list_backgrounds(
+    _: int = Depends(get_admin_user),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     use_case: ListBackgroundsUseCase = Depends(
         Provide[ApplicationContainer.list_backgrounds_use_case]
     ),
 ):
-    """Получить список всех фонов"""
+    """Получить список всех фонов (требуется админ-доступ)"""
     backgrounds = await use_case.execute(limit=limit, offset=offset)
     return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
 
 
-@router.get("/available", response_model=list[BackgroundResponse])
-@inject
-async def list_available_backgrounds(
-    use_case: ListAvailableBackgroundsUseCase = Depends(
-        Provide[ApplicationContainer.list_available_backgrounds_use_case]
-    ),
-):
-    """Получить список доступных фонов"""
-    backgrounds = await use_case.execute()
-    return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
-
-
-@router.get("/{background_id}", response_model=BackgroundResponse)
+@router.get("/admin/{background_id}", response_model=BackgroundResponse)
 @inject
 async def get_background(
     background_id: UUID,
+    _: int = Depends(get_admin_user),
     use_case: GetBackgroundUseCase = Depends(
         Provide[ApplicationContainer.get_background_use_case]
     ),
 ):
-    """Получить фон по ID"""
+    """Получить фон по ID (требуется админ-доступ)"""
     try:
         background = await use_case.execute(background_id)
         return BackgroundResponse.model_validate(background)
@@ -68,19 +58,21 @@ async def get_background(
 
 
 @router.post(
-    "/", response_model=BackgroundResponse, status_code=status.HTTP_201_CREATED
+    "/admin", response_model=BackgroundResponse, status_code=status.HTTP_201_CREATED
 )
 @inject
 async def create_background(
     data: BackgroundCreate,
+    _: int = Depends(get_admin_user),
     use_case: CreateBackgroundUseCase = Depends(
         Provide[ApplicationContainer.create_background_use_case]
     ),
 ):
-    """Создать новый фон"""
+    """Создать новый фон (требуется админ-доступ)"""
     input_data = CreateBackgroundInput(
         name=data.name,
         description=data.description,
+        color=data.color,
         cost=data.cost,
         required_level=data.required_level,
         is_available=data.is_available,
@@ -89,21 +81,23 @@ async def create_background(
     return BackgroundResponse.model_validate(background)
 
 
-@router.patch("/{background_id}", response_model=BackgroundResponse)
+@router.patch("/admin/{background_id}", response_model=BackgroundResponse)
 @inject
 async def update_background(
     background_id: UUID,
     data: BackgroundUpdate,
+    _: int = Depends(get_admin_user),
     use_case: UpdateBackgroundUseCase = Depends(
         Provide[ApplicationContainer.update_background_use_case]
     ),
 ):
-    """Обновить фон"""
+    """Обновить фон (требуется админ-доступ)"""
     try:
         input_data = UpdateBackgroundInput(
             background_id=background_id,
             name=data.name,
             description=data.description,
+            color=data.color,
             cost=data.cost,
             required_level=data.required_level,
             is_available=data.is_available,
@@ -114,15 +108,16 @@ async def update_background(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{background_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin/{background_id}", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_background(
     background_id: UUID,
+    _: int = Depends(get_admin_user),
     use_case: DeleteBackgroundUseCase = Depends(
         Provide[ApplicationContainer.delete_background_use_case]
     ),
 ):
-    """Удалить фон"""
+    """Удалить фон (требуется админ-доступ)"""
     try:
         await use_case.execute(background_id)
     except EntityNotFoundException as e:

@@ -53,3 +53,43 @@ class ListTransactionsForUserUseCase:
 
     async def execute(self, user_tg_id: int) -> list[Transaction]:
         return await self._transactions_repository.list_for_user(TelegramId(user_tg_id))
+
+
+@dataclass
+class UpdateTransactionInput:
+    transaction_id: uuid.UUID
+    amount: int | None = None
+    type: str | None = None
+    description: str | None = None
+
+
+class UpdateTransactionUseCase:
+    def __init__(self, transactions_repository: TransactionsRepository) -> None:
+        self._transactions_repository = transactions_repository
+
+    async def execute(self, data: UpdateTransactionInput) -> Transaction:
+        transaction = await self._transactions_repository.get(data.transaction_id)
+        if transaction is None:
+            raise EntityNotFoundException(
+                f"Transaction {data.transaction_id} not found"
+            )
+
+        if data.amount is not None:
+            transaction.amount = data.amount
+        if data.type is not None:
+            transaction.type = data.type
+        if data.description is not None:
+            transaction.description = data.description
+
+        return await self._transactions_repository.update(transaction)
+
+
+class DeleteTransactionUseCase:
+    def __init__(self, transactions_repository: TransactionsRepository) -> None:
+        self._transactions_repository = transactions_repository
+
+    async def execute(self, transaction_id: uuid.UUID) -> None:
+        transaction = await self._transactions_repository.get(transaction_id)
+        if transaction is None:
+            raise EntityNotFoundException(f"Transaction {transaction_id} not found")
+        await self._transactions_repository.delete(transaction_id)

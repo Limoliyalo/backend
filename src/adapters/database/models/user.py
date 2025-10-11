@@ -27,6 +27,11 @@ class UserModel(TimestampMixin, Base):
         nullable=False,
         server_default=text("true"),
     )
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+    )
     balance: Mapped[int] = mapped_column(
         Integer,
         nullable=False,

@@ -4,6 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
+from src.core.auth import get_admin_user
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.item_background_positions import (
@@ -27,7 +28,7 @@ router = APIRouter(
 
 
 @router.get(
-    "",
+    "/admin",
     response_model=list[ItemBackgroundPositionResponse],
     status_code=status.HTTP_200_OK,
 )
@@ -35,28 +36,30 @@ router = APIRouter(
 async def list_positions_for_item(
     item_id: UUID = Query(..., description="ID предмета"),
     background_id: UUID = Query(..., description="ID фона"),
+    _: int = Depends(get_admin_user),
     use_case: ListPositionsForItemUseCase = Depends(
         Provide[ApplicationContainer.list_positions_for_item_use_case]
     ),
 ):
-    """Получить все позиции предмета на фоне"""
+    """Получить все позиции предмета на фоне (требуется админ-доступ)"""
     positions = await use_case.execute(item_id, background_id)
     return [ItemBackgroundPositionResponse.model_validate(pos) for pos in positions]
 
 
 @router.get(
-    "/{position_id}",
+    "/admin/{position_id}",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def get_position(
     position_id: UUID,
+    _: int = Depends(get_admin_user),
     use_case: GetPositionUseCase = Depends(
         Provide[ApplicationContainer.get_position_use_case]
     ),
 ):
-    """Получить позицию по ID"""
+    """Получить позицию по ID (требуется админ-доступ)"""
     try:
         position = await use_case.execute(position_id)
         return ItemBackgroundPositionResponse.model_validate(position)
@@ -65,18 +68,19 @@ async def get_position(
 
 
 @router.post(
-    "",
+    "/admin",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 @inject
 async def create_position(
     data: ItemBackgroundPositionCreate,
+    _: int = Depends(get_admin_user),
     use_case: CreatePositionUseCase = Depends(
         Provide[ApplicationContainer.create_position_use_case]
     ),
 ):
-    """Создать новую позицию предмета на фоне"""
+    """Создать новую позицию предмета на фоне (требуется админ-доступ)"""
     input_data = CreatePositionInput(
         item_id=data.item_id,
         background_id=data.background_id,
@@ -89,7 +93,7 @@ async def create_position(
 
 
 @router.put(
-    "/{position_id}",
+    "/admin/{position_id}",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -97,11 +101,12 @@ async def create_position(
 async def update_position(
     position_id: UUID,
     data: ItemBackgroundPositionUpdate,
+    _: int = Depends(get_admin_user),
     use_case: UpdatePositionUseCase = Depends(
         Provide[ApplicationContainer.update_position_use_case]
     ),
 ):
-    """Обновить позицию"""
+    """Обновить позицию (требуется админ-доступ)"""
     try:
         input_data = UpdatePositionInput(
             position_id=position_id,
@@ -115,15 +120,16 @@ async def update_position(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{position_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin/{position_id}", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_position(
     position_id: UUID,
+    _: int = Depends(get_admin_user),
     use_case: DeletePositionUseCase = Depends(
         Provide[ApplicationContainer.delete_position_use_case]
     ),
 ):
-    """Удалить позицию"""
+    """Удалить позицию (требуется админ-доступ)"""
     try:
         await use_case.execute(position_id)
     except EntityNotFoundException as e:

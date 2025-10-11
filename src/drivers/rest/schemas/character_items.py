@@ -11,8 +11,13 @@ class CharacterItemBase(BaseModel):
 
 
 class CharacterItemPurchase(BaseModel):
+    character_id: UUID
     item_id: UUID
     is_equipped: bool = False
+
+
+class CharacterItemUpdate(BaseModel):
+    is_equipped: bool | None = None
 
 
 class CharacterItemResponse(CharacterItemBase):

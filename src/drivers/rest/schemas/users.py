@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
         None, description="Новый пароль (будет автоматически захэширован)"
     )
     is_active: bool | None = None
+    balance: int | None = Field(None, ge=0, description="Баланс пользователя")
 
 
 class UserResponse(UserBase):

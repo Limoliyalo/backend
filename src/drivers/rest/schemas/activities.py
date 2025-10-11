@@ -15,6 +15,13 @@ class ActivityTypeCreate(ActivityTypeBase):
     pass
 
 
+class ActivityTypeUpdate(BaseModel):
+    name: str | None = None
+    unit: str | None = None
+    color: str | None = None
+    daily_goal_default: int | None = None
+
+
 class ActivityTypeResponse(ActivityTypeBase):
     id: UUID
     created_at: datetime
@@ -88,6 +95,11 @@ class MoodHistoryBase(BaseModel):
 
 class MoodHistoryCreate(MoodHistoryBase):
     character_id: UUID
+
+
+class MoodHistoryUpdate(BaseModel):
+    mood: str | None = None
+    trigger: str | None = None
 
 
 class MoodHistoryResponse(MoodHistoryBase):

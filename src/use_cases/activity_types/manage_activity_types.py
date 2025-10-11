@@ -34,10 +34,9 @@ class GetActivityTypeUseCase:
         self._activity_types_repository = activity_types_repository
 
     async def execute(self, activity_type_id: uuid.UUID) -> ActivityType:
-        # Нужно добавить get_by_id в репозиторий
-        activity_type = await self._activity_types_repository.get_by_name(
-            ""
-        )  # Placeholder
+        activity_type = await self._activity_types_repository.get_by_id(
+            activity_type_id
+        )
         if activity_type is None:
             raise EntityNotFoundException(f"ActivityType {activity_type_id} not found")
         return activity_type
@@ -60,3 +59,50 @@ class ListActivityTypesUseCase:
 
     async def execute(self) -> list[ActivityType]:
         return await self._activity_types_repository.list_all()
+
+
+@dataclass
+class UpdateActivityTypeInput:
+    activity_type_id: uuid.UUID
+    name: str | None = None
+    unit: str | None = None
+    color: str | None = None
+    daily_goal_default: int | None = None
+
+
+class UpdateActivityTypeUseCase:
+    def __init__(self, activity_types_repository: ActivityTypesRepository) -> None:
+        self._activity_types_repository = activity_types_repository
+
+    async def execute(self, data: UpdateActivityTypeInput) -> ActivityType:
+        activity_type = await self._activity_types_repository.get_by_id(
+            data.activity_type_id
+        )
+        if activity_type is None:
+            raise EntityNotFoundException(
+                f"ActivityType {data.activity_type_id} not found"
+            )
+
+        if data.name is not None:
+            activity_type.name = data.name
+        if data.unit is not None:
+            activity_type.unit = data.unit
+        if data.color is not None:
+            activity_type.color = data.color
+        if data.daily_goal_default is not None:
+            activity_type.daily_goal_default = data.daily_goal_default
+
+        return await self._activity_types_repository.update(activity_type)
+
+
+class DeleteActivityTypeUseCase:
+    def __init__(self, activity_types_repository: ActivityTypesRepository) -> None:
+        self._activity_types_repository = activity_types_repository
+
+    async def execute(self, activity_type_id: uuid.UUID) -> None:
+        activity_type = await self._activity_types_repository.get_by_id(
+            activity_type_id
+        )
+        if activity_type is None:
+            raise EntityNotFoundException(f"ActivityType {activity_type_id} not found")
+        await self._activity_types_repository.delete(activity_type_id)

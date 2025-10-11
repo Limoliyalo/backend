@@ -183,6 +183,7 @@ class SQLAlchemyBackgroundsRepository(
             id=background.id,
             name=background.name,
             description=background.description,
+            color=background.color,
             cost=background.cost,
             required_level=background.required_level,
             is_available=background.is_available,
@@ -199,6 +200,7 @@ class SQLAlchemyBackgroundsRepository(
 
             model.name = background.name
             model.description = background.description
+            model.color = background.color
             model.cost = background.cost
             model.required_level = background.required_level
             model.is_available = background.is_available
@@ -220,6 +222,7 @@ class SQLAlchemyBackgroundsRepository(
             id=model.id,
             name=model.name,
             description=model.description,
+            color=model.color,
             cost=model.cost,
             required_level=model.required_level,
             is_available=model.is_available,

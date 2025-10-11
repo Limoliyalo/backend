@@ -11,8 +11,13 @@ class CharacterBackgroundBase(BaseModel):
 
 
 class CharacterBackgroundPurchase(BaseModel):
+    character_id: UUID
     background_id: UUID
     is_active: bool = False
+
+
+class CharacterBackgroundUpdate(BaseModel):
+    is_active: bool | None = None
 
 
 class CharacterBackgroundResponse(CharacterBackgroundBase):

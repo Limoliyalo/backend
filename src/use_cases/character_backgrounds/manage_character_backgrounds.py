@@ -25,6 +25,23 @@ class ListCharacterBackgroundsUseCase:
         )
 
 
+class GetCharacterBackgroundUseCase:
+    def __init__(
+        self, character_backgrounds_repository: CharacterBackgroundsRepository
+    ) -> None:
+        self._character_backgrounds_repository = character_backgrounds_repository
+
+    async def execute(self, character_background_id: uuid.UUID) -> CharacterBackground:
+        background = await self._character_backgrounds_repository.get_by_id(
+            character_background_id
+        )
+        if background is None:
+            raise EntityNotFoundException(
+                f"CharacterBackground {character_background_id} not found"
+            )
+        return background
+
+
 class PurchaseBackgroundUseCase:
     def __init__(
         self, character_backgrounds_repository: CharacterBackgroundsRepository
@@ -74,6 +91,38 @@ class DeactivateBackgroundUseCase:
                 f"CharacterBackground {character_background_id} not found"
             )
         background.deactivate()
+        return await self._character_backgrounds_repository.update(background)
+
+
+@dataclass
+class UpdateCharacterBackgroundInput:
+    character_background_id: uuid.UUID
+    is_active: bool | None = None
+
+
+class UpdateCharacterBackgroundUseCase:
+    def __init__(
+        self, character_backgrounds_repository: CharacterBackgroundsRepository
+    ) -> None:
+        self._character_backgrounds_repository = character_backgrounds_repository
+
+    async def execute(
+        self, data: UpdateCharacterBackgroundInput
+    ) -> CharacterBackground:
+        background = await self._character_backgrounds_repository.get_by_id(
+            data.character_background_id
+        )
+        if background is None:
+            raise EntityNotFoundException(
+                f"CharacterBackground {data.character_background_id} not found"
+            )
+
+        if data.is_active is not None:
+            if data.is_active:
+                background.activate()
+            else:
+                background.deactivate()
+
         return await self._character_backgrounds_repository.update(background)
 
 

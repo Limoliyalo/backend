@@ -21,6 +21,19 @@ class ListCharacterItemsUseCase:
         return await self._character_items_repository.list_for_character(character_id)
 
 
+class GetCharacterItemUseCase:
+    def __init__(self, character_items_repository: CharacterItemsRepository) -> None:
+        self._character_items_repository = character_items_repository
+
+    async def execute(self, character_item_id: uuid.UUID) -> CharacterItem:
+        item = await self._character_items_repository.get_by_id(character_item_id)
+        if item is None:
+            raise EntityNotFoundException(
+                f"CharacterItem {character_item_id} not found"
+            )
+        return item
+
+
 class PurchaseItemUseCase:
     def __init__(self, character_items_repository: CharacterItemsRepository) -> None:
         self._character_items_repository = character_items_repository
@@ -60,6 +73,32 @@ class UnequipItemUseCase:
                 f"CharacterItem {character_item_id} not found"
             )
         item.unequip()
+        return await self._character_items_repository.update(item)
+
+
+@dataclass
+class UpdateCharacterItemInput:
+    character_item_id: uuid.UUID
+    is_equipped: bool | None = None
+
+
+class UpdateCharacterItemUseCase:
+    def __init__(self, character_items_repository: CharacterItemsRepository) -> None:
+        self._character_items_repository = character_items_repository
+
+    async def execute(self, data: UpdateCharacterItemInput) -> CharacterItem:
+        item = await self._character_items_repository.get_by_id(data.character_item_id)
+        if item is None:
+            raise EntityNotFoundException(
+                f"CharacterItem {data.character_item_id} not found"
+            )
+
+        if data.is_equipped is not None:
+            if data.is_equipped:
+                item.equip()
+            else:
+                item.unequip()
+
         return await self._character_items_repository.update(item)
 
 

@@ -36,6 +36,7 @@ class Background:
     id: uuid.UUID
     name: str
     description: str | None = None
+    color: str | None = None
     cost: int = 0
     required_level: int = 1
     is_available: bool = True

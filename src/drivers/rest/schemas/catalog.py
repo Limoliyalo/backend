@@ -54,6 +54,7 @@ class ItemResponse(ItemBase):
 class BackgroundBase(BaseModel):
     name: str
     description: str | None = None
+    color: str | None = None
     cost: int = 0
     required_level: int = 1
     is_available: bool = True
@@ -66,6 +67,7 @@ class BackgroundCreate(BackgroundBase):
 class BackgroundUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    color: str | None = None
     cost: int | None = None
     required_level: int | None = None
     is_available: bool | None = None

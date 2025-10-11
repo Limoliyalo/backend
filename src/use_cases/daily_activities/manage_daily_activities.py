@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from src.domain.entities.healthity.activities import DailyActivity
+from src.domain.exceptions import EntityNotFoundException
 from src.ports.repositories.healthity.activities import DailyActivitiesRepository
 
 
@@ -51,10 +52,42 @@ class ListDailyActivitiesForDayUseCase:
         return await self._daily_activities_repository.list_for_day(character_id, day)
 
 
+class GetDailyActivityUseCase:
+    def __init__(self, daily_activities_repository: DailyActivitiesRepository) -> None:
+        self._daily_activities_repository = daily_activities_repository
+
+    async def execute(self, activity_id: uuid.UUID) -> DailyActivity:
+        activity = await self._daily_activities_repository.get_by_id(activity_id)
+        if activity is None:
+            raise EntityNotFoundException(f"DailyActivity {activity_id} not found")
+        return activity
+
+
 class UpdateDailyActivityUseCase:
     def __init__(self, daily_activities_repository: DailyActivitiesRepository) -> None:
         self._daily_activities_repository = daily_activities_repository
 
     async def execute(self, data: UpdateDailyActivityInput) -> DailyActivity:
-        # Нужно получить существующую активность (добавить get_by_id)
-        raise NotImplementedError("get_by_id not implemented for DailyActivity")
+        activity = await self._daily_activities_repository.get_by_id(data.activity_id)
+        if activity is None:
+            raise EntityNotFoundException(f"DailyActivity {data.activity_id} not found")
+
+        if data.value is not None:
+            activity.value = data.value
+        if data.goal is not None:
+            activity.goal = data.goal
+        if data.notes is not None:
+            activity.notes = data.notes
+
+        return await self._daily_activities_repository.update(activity)
+
+
+class DeleteDailyActivityUseCase:
+    def __init__(self, daily_activities_repository: DailyActivitiesRepository) -> None:
+        self._daily_activities_repository = daily_activities_repository
+
+    async def execute(self, activity_id: uuid.UUID) -> None:
+        activity = await self._daily_activities_repository.get_by_id(activity_id)
+        if activity is None:
+            raise EntityNotFoundException(f"DailyActivity {activity_id} not found")
+        await self._daily_activities_repository.delete(activity_id)

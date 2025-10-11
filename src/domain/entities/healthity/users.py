@@ -11,6 +11,7 @@ class User:
     telegram_id: TelegramId
     password_hash: str | None = None
     is_active: bool = True
+    is_admin: bool = False
     balance: int = 0
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
@@ -27,20 +28,6 @@ class User:
 
     def update_password(self, password_hash: str | None) -> None:
         self.password_hash = password_hash
-        self.touch()
-
-    def deposit(self, amount: int) -> None:
-        if amount < 0:
-            raise ValueError("Deposit amount must be non-negative")
-        self.balance += amount
-        self.touch()
-
-    def withdraw(self, amount: int) -> None:
-        if amount < 0:
-            raise ValueError("Withdraw amount must be non-negative")
-        if amount > self.balance:
-            raise ValueError("Insufficient balance")
-        self.balance -= amount
         self.touch()
 
     def touch(self) -> None:

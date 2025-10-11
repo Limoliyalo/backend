@@ -21,18 +21,7 @@ class UpdateUserInput:
     telegram_id: int
     password: str | None = None
     is_active: bool | None = None
-
-
-@dataclass
-class DepositInput:
-    telegram_id: int
-    amount: int
-
-
-@dataclass
-class WithdrawInput:
-    telegram_id: int
-    amount: int
+    balance: int | None = None
 
 
 class GetUserUseCase:
@@ -193,6 +182,11 @@ class UpdateUserUseCase:
                 user.activate()
             else:
                 user.deactivate()
+        if data.balance is not None:
+            if data.balance < 0:
+                raise ValueError("Balance cannot be negative")
+            user.balance = data.balance
+            user.touch()
 
         return await self._users_repository.update(user)
 
@@ -206,48 +200,3 @@ class DeleteUserUseCase:
         if user is None:
             raise UserNotFoundException(telegram_id)
         await self._users_repository.delete(TelegramId(telegram_id))
-
-
-class DepositBalanceUseCase:
-    """Пополнение баланса пользователя"""
-
-    def __init__(self, users_repository: UsersRepository) -> None:
-        self._users_repository = users_repository
-
-    async def execute(self, data: DepositInput) -> User:
-        telegram_id = TelegramId(data.telegram_id)
-        user = await self._users_repository.get_by_telegram_id(telegram_id)
-
-        if user is None:
-            raise UserNotFoundException(data.telegram_id)
-
-        if data.amount <= 0:
-            raise ValueError("Deposit amount must be positive")
-
-        user.deposit(data.amount)
-        return await self._users_repository.update(user)
-
-
-class WithdrawBalanceUseCase:
-    """Списание средств с баланса пользователя"""
-
-    def __init__(self, users_repository: UsersRepository) -> None:
-        self._users_repository = users_repository
-
-    async def execute(self, data: WithdrawInput) -> User:
-        telegram_id = TelegramId(data.telegram_id)
-        user = await self._users_repository.get_by_telegram_id(telegram_id)
-
-        if user is None:
-            raise UserNotFoundException(data.telegram_id)
-
-        if data.amount <= 0:
-            raise ValueError("Withdrawal amount must be positive")
-
-        if user.balance < data.amount:
-            raise ValueError(
-                f"Insufficient balance. Available: {user.balance}, required: {data.amount}"
-            )
-
-        user.withdraw(data.amount)
-        return await self._users_repository.update(user)

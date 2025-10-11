@@ -27,8 +27,6 @@ from src.use_cases.users.manage_users import (
     ListUsersUseCase,
     UpdateUserUseCase,
     DeleteUserUseCase,
-    DepositBalanceUseCase,
-    WithdrawBalanceUseCase,
 )
 from src.use_cases.characters.create_character import CreateCharacterUseCase
 from src.use_cases.characters.get_character import (
@@ -56,50 +54,67 @@ from src.use_cases.backgrounds.manage_backgrounds import (
 )
 from src.use_cases.transactions.manage_transactions import (
     CreateTransactionUseCase,
+    DeleteTransactionUseCase,
     GetTransactionUseCase,
     ListTransactionsForUserUseCase,
+    UpdateTransactionUseCase,
 )
 from src.use_cases.user_settings.manage_settings import (
+    DeleteUserSettingsUseCase,
     GetUserSettingsUseCase,
+    ListUserSettingsUseCase,
     UpsertUserSettingsUseCase,
 )
 from src.use_cases.activity_types.manage_activity_types import (
     CreateActivityTypeUseCase,
+    DeleteActivityTypeUseCase,
     GetActivityTypeByNameUseCase,
+    GetActivityTypeUseCase,
     ListActivityTypesUseCase,
+    UpdateActivityTypeUseCase,
 )
 from src.use_cases.daily_activities.manage_daily_activities import (
     CreateDailyActivityUseCase,
+    DeleteDailyActivityUseCase,
+    GetDailyActivityUseCase,
     ListDailyActivitiesForDayUseCase,
+    UpdateDailyActivityUseCase,
 )
 from src.use_cases.daily_progress.manage_daily_progress import (
     CreateDailyProgressUseCase,
+    DeleteDailyProgressUseCase,
     GetDailyProgressForDayUseCase,
+    GetDailyProgressUseCase,
+    ListDailyProgressForCharacterUseCase,
+    UpdateDailyProgressUseCase,
 )
 from src.use_cases.mood_history.manage_mood_history import (
     CreateMoodHistoryUseCase,
-    ListMoodHistoryForCharacterUseCase,
-    GetMoodHistoryUseCase,
     DeleteMoodHistoryUseCase,
+    GetMoodHistoryUseCase,
+    ListMoodHistoryForCharacterUseCase,
+    UpdateMoodHistoryUseCase,
 )
 from src.use_cases.user_friends.manage_user_friends import (
-    ListUserFriendsUseCase,
     AddFriendUseCase,
+    GetUserFriendUseCase,
+    ListUserFriendsUseCase,
     RemoveFriendUseCase,
+    UpdateUserFriendUseCase,
 )
 from src.use_cases.character_items.manage_character_items import (
+    GetCharacterItemUseCase,
     ListCharacterItemsUseCase,
     PurchaseItemUseCase,
-    EquipItemUseCase,
-    UnequipItemUseCase,
     RemoveCharacterItemUseCase,
+    UpdateCharacterItemUseCase,
 )
 from src.use_cases.character_backgrounds.manage_character_backgrounds import (
+    GetCharacterBackgroundUseCase,
     ListCharacterBackgroundsUseCase,
     PurchaseBackgroundUseCase,
-    ActivateBackgroundUseCase,
-    DeactivateBackgroundUseCase,
     RemoveCharacterBackgroundUseCase,
+    UpdateCharacterBackgroundUseCase,
 )
 from src.use_cases.item_categories.manage_item_categories import (
     ListItemCategoriesUseCase,
@@ -194,12 +209,6 @@ class ApplicationContainer(containers.DeclarativeContainer):
     delete_user_use_case = providers.Factory(
         DeleteUserUseCase, users_repository=users_repository
     )
-    deposit_balance_use_case = providers.Factory(
-        DepositBalanceUseCase, users_repository=users_repository
-    )
-    withdraw_balance_use_case = providers.Factory(
-        WithdrawBalanceUseCase, users_repository=users_repository
-    )
 
     # Character use cases
     create_character_use_case = providers.Factory(
@@ -271,18 +280,33 @@ class ApplicationContainer(containers.DeclarativeContainer):
     list_transactions_for_user_use_case = providers.Factory(
         ListTransactionsForUserUseCase, transactions_repository=transactions_repository
     )
+    update_transaction_use_case = providers.Factory(
+        UpdateTransactionUseCase, transactions_repository=transactions_repository
+    )
+    delete_transaction_use_case = providers.Factory(
+        DeleteTransactionUseCase, transactions_repository=transactions_repository
+    )
 
     # User settings use cases
+    list_user_settings_use_case = providers.Factory(
+        ListUserSettingsUseCase, settings_repository=user_settings_repository
+    )
     get_user_settings_use_case = providers.Factory(
         GetUserSettingsUseCase, settings_repository=user_settings_repository
     )
     upsert_user_settings_use_case = providers.Factory(
         UpsertUserSettingsUseCase, settings_repository=user_settings_repository
     )
+    delete_user_settings_use_case = providers.Factory(
+        DeleteUserSettingsUseCase, settings_repository=user_settings_repository
+    )
 
     # Activity Types use cases
     create_activity_type_use_case = providers.Factory(
         CreateActivityTypeUseCase, activity_types_repository=activity_types_repository
+    )
+    get_activity_type_use_case = providers.Factory(
+        GetActivityTypeUseCase, activity_types_repository=activity_types_repository
     )
     get_activity_type_by_name_use_case = providers.Factory(
         GetActivityTypeByNameUseCase,
@@ -290,6 +314,12 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     list_activity_types_use_case = providers.Factory(
         ListActivityTypesUseCase, activity_types_repository=activity_types_repository
+    )
+    update_activity_type_use_case = providers.Factory(
+        UpdateActivityTypeUseCase, activity_types_repository=activity_types_repository
+    )
+    delete_activity_type_use_case = providers.Factory(
+        DeleteActivityTypeUseCase, activity_types_repository=activity_types_repository
     )
 
     # Daily Activities use cases
@@ -301,13 +331,41 @@ class ApplicationContainer(containers.DeclarativeContainer):
         ListDailyActivitiesForDayUseCase,
         daily_activities_repository=daily_activities_repository,
     )
+    get_daily_activity_use_case = providers.Factory(
+        GetDailyActivityUseCase,
+        daily_activities_repository=daily_activities_repository,
+    )
+    update_daily_activity_use_case = providers.Factory(
+        UpdateDailyActivityUseCase,
+        daily_activities_repository=daily_activities_repository,
+    )
+    delete_daily_activity_use_case = providers.Factory(
+        DeleteDailyActivityUseCase,
+        daily_activities_repository=daily_activities_repository,
+    )
 
     # Daily Progress use cases
     create_daily_progress_use_case = providers.Factory(
         CreateDailyProgressUseCase, daily_progress_repository=daily_progress_repository
     )
+    list_daily_progress_for_character_use_case = providers.Factory(
+        ListDailyProgressForCharacterUseCase,
+        daily_progress_repository=daily_progress_repository,
+    )
     get_daily_progress_for_day_use_case = providers.Factory(
         GetDailyProgressForDayUseCase,
+        daily_progress_repository=daily_progress_repository,
+    )
+    get_daily_progress_use_case = providers.Factory(
+        GetDailyProgressUseCase,
+        daily_progress_repository=daily_progress_repository,
+    )
+    update_daily_progress_use_case = providers.Factory(
+        UpdateDailyProgressUseCase,
+        daily_progress_repository=daily_progress_repository,
+    )
+    delete_daily_progress_use_case = providers.Factory(
+        DeleteDailyProgressUseCase,
         daily_progress_repository=daily_progress_repository,
     )
 
@@ -322,6 +380,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     get_mood_history_use_case = providers.Factory(
         GetMoodHistoryUseCase, mood_history_repository=mood_history_repository
     )
+    update_mood_history_use_case = providers.Factory(
+        UpdateMoodHistoryUseCase, mood_history_repository=mood_history_repository
+    )
     delete_mood_history_use_case = providers.Factory(
         DeleteMoodHistoryUseCase, mood_history_repository=mood_history_repository
     )
@@ -330,8 +391,14 @@ class ApplicationContainer(containers.DeclarativeContainer):
     list_user_friends_use_case = providers.Factory(
         ListUserFriendsUseCase, user_friends_repository=user_friends_repository
     )
+    get_user_friend_use_case = providers.Factory(
+        GetUserFriendUseCase, user_friends_repository=user_friends_repository
+    )
     add_friend_use_case = providers.Factory(
         AddFriendUseCase, user_friends_repository=user_friends_repository
+    )
+    update_user_friend_use_case = providers.Factory(
+        UpdateUserFriendUseCase, user_friends_repository=user_friends_repository
     )
     remove_friend_use_case = providers.Factory(
         RemoveFriendUseCase, user_friends_repository=user_friends_repository
@@ -341,14 +408,15 @@ class ApplicationContainer(containers.DeclarativeContainer):
     list_character_items_use_case = providers.Factory(
         ListCharacterItemsUseCase, character_items_repository=character_items_repository
     )
+    get_character_item_use_case = providers.Factory(
+        GetCharacterItemUseCase, character_items_repository=character_items_repository
+    )
     purchase_item_use_case = providers.Factory(
         PurchaseItemUseCase, character_items_repository=character_items_repository
     )
-    equip_item_use_case = providers.Factory(
-        EquipItemUseCase, character_items_repository=character_items_repository
-    )
-    unequip_item_use_case = providers.Factory(
-        UnequipItemUseCase, character_items_repository=character_items_repository
+    update_character_item_use_case = providers.Factory(
+        UpdateCharacterItemUseCase,
+        character_items_repository=character_items_repository,
     )
     remove_character_item_use_case = providers.Factory(
         RemoveCharacterItemUseCase,
@@ -360,16 +428,16 @@ class ApplicationContainer(containers.DeclarativeContainer):
         ListCharacterBackgroundsUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
     )
+    get_character_background_use_case = providers.Factory(
+        GetCharacterBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
     purchase_background_use_case = providers.Factory(
         PurchaseBackgroundUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
     )
-    activate_background_use_case = providers.Factory(
-        ActivateBackgroundUseCase,
-        character_backgrounds_repository=character_backgrounds_repository,
-    )
-    deactivate_background_use_case = providers.Factory(
-        DeactivateBackgroundUseCase,
+    update_character_background_use_case = providers.Factory(
+        UpdateCharacterBackgroundUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
     )
     remove_character_background_use_case = providers.Factory(

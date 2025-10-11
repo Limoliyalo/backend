@@ -7,9 +7,13 @@ class BaseAPIException(HTTPException):
     status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
     error: str = "Internal Server Error"
 
-    def __init__(self, detail: str | None = None) -> None:
+    def __init__(
+        self, detail: str | None = None, headers: dict[str, str] | None = None
+    ) -> None:
         self.detail = detail or self.error
-        super().__init__(status_code=self.status_code, detail=self.detail)
+        super().__init__(
+            status_code=self.status_code, detail=self.detail, headers=headers
+        )
 
     def __repr__(self) -> str:
         return f"Error: {self.error}, status: {self.status_code}, detail: {self.detail}"

@@ -10,6 +10,7 @@ from src.ports.repositories.healthity.catalog import BackgroundsRepository
 class CreateBackgroundInput:
     name: str
     description: str | None = None
+    color: str | None = None
     cost: int = 0
     required_level: int = 1
     is_available: bool = True
@@ -20,6 +21,7 @@ class UpdateBackgroundInput:
     background_id: uuid.UUID
     name: str | None = None
     description: str | None = None
+    color: str | None = None
     cost: int | None = None
     required_level: int | None = None
     is_available: bool | None = None
@@ -34,6 +36,7 @@ class CreateBackgroundUseCase:
             id=uuid.uuid4(),
             name=data.name,
             description=data.description,
+            color=data.color,
             cost=data.cost,
             required_level=data.required_level,
             is_available=data.is_available,
@@ -81,6 +84,8 @@ class UpdateBackgroundUseCase:
             background.name = data.name
         if data.description is not None:
             background.description = data.description
+        if data.color is not None:
+            background.color = data.color
         if data.cost is not None:
             background.cost = data.cost
         if data.required_level is not None:

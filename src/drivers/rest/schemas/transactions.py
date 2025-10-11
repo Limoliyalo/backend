@@ -18,6 +18,12 @@ class TransactionCreate(TransactionBase):
     related_background_id: UUID | None = None
 
 
+class TransactionUpdate(BaseModel):
+    amount: int | None = None
+    type: str | None = None
+    description: str | None = None
+
+
 class TransactionResponse(TransactionBase):
     id: UUID
     user_tg_id: int

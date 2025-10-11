@@ -44,6 +44,12 @@ class SQLAlchemyActivityTypesRepository(
             return None
         return self._to_domain(model)
 
+    async def get_by_id(self, activity_type_id: uuid.UUID) -> ActivityType | None:
+        model = await super().get(activity_type_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     async def add(self, activity_type: ActivityType) -> ActivityType:
         model = ActivityTypeModel(
             id=activity_type.id,
@@ -55,6 +61,29 @@ class SQLAlchemyActivityTypesRepository(
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
+
+    async def update(self, activity_type: ActivityType) -> ActivityType:
+        async with self._uow() as uow:
+            model = await uow.session.get(ActivityTypeModel, activity_type.id)
+            if model is None:
+                raise ValueError("ActivityType not found")
+
+            model.name = activity_type.name
+            model.unit = activity_type.unit
+            model.color = activity_type.color
+            model.daily_goal_default = activity_type.daily_goal_default
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, activity_type_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            await uow.session.execute(
+                delete(ActivityTypeModel).where(
+                    ActivityTypeModel.id == activity_type_id
+                )
+            )
 
     @staticmethod
     def _to_domain(model: ActivityTypeModel) -> ActivityType:
@@ -106,6 +135,37 @@ class SQLAlchemyDailyActivitiesRepository(
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def get_by_id(self, activity_id: uuid.UUID) -> DailyActivity | None:
+        async with self._uow() as uow:
+            model = await uow.session.get(DailyActivityModel, activity_id)
+            if model is None:
+                return None
+            return self._to_domain(model)
+
+    async def update(self, activity: DailyActivity) -> DailyActivity:
+        async with self._uow() as uow:
+            model = await uow.session.get(DailyActivityModel, activity.id)
+            if model is None:
+                raise ValueError("DailyActivity not found")
+
+            model.value = activity.value
+            model.goal = activity.goal
+            model.notes = activity.notes
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, activity_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            from sqlalchemy import delete as sql_delete
+
+            await uow.session.execute(
+                sql_delete(DailyActivityModel).where(
+                    DailyActivityModel.id == activity_id
+                )
+            )
 
     @staticmethod
     def _to_domain(model: DailyActivityModel) -> DailyActivity:
@@ -163,6 +223,42 @@ class SQLAlchemyDailyProgressRepository(
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def list_for_character(self, character_id: uuid.UUID) -> list[DailyProgress]:
+        models = await self.list(filters={"character_id": character_id})
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_id(self, progress_id: uuid.UUID) -> DailyProgress | None:
+        async with self._uow() as uow:
+            model = await uow.session.get(DailyProgressModel, progress_id)
+            if model is None:
+                return None
+            return self._to_domain(model)
+
+    async def update(self, progress: DailyProgress) -> DailyProgress:
+        async with self._uow() as uow:
+            model = await uow.session.get(DailyProgressModel, progress.id)
+            if model is None:
+                raise ValueError("DailyProgress not found")
+
+            model.experience_gained = progress.experience_gained
+            model.level_at_end = progress.level_at_end
+            model.mood_average = progress.mood_average
+            model.behavior_index = progress.behavior_index
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, progress_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            from sqlalchemy import delete as sql_delete
+
+            await uow.session.execute(
+                sql_delete(DailyProgressModel).where(
+                    DailyProgressModel.id == progress_id
+                )
+            )
 
     @staticmethod
     def _to_domain(model: DailyProgressModel) -> DailyProgress:
@@ -229,6 +325,19 @@ class SQLAlchemyMoodHistoryRepository(
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
+
+    async def update(self, mood: MoodHistory) -> MoodHistory:
+        async with self._uow() as uow:
+            model = await uow.session.get(MoodHistoryModel, mood.id)
+            if model is None:
+                raise ValueError("MoodHistory not found")
+
+            model.mood = mood.mood
+            model.trigger = mood.trigger
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
 
     async def delete(self, mood_id: uuid.UUID) -> None:
         async with self._uow() as uow:

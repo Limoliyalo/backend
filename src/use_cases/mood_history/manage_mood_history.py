@@ -52,6 +52,34 @@ class GetMoodHistoryUseCase:
         return mood_history
 
 
+@dataclass
+class UpdateMoodHistoryInput:
+    mood_history_id: uuid.UUID
+    mood: str | None = None
+    trigger: str | None = None
+
+
+class UpdateMoodHistoryUseCase:
+    def __init__(self, mood_history_repository: MoodHistoryRepository) -> None:
+        self._mood_history_repository = mood_history_repository
+
+    async def execute(self, data: UpdateMoodHistoryInput) -> MoodHistory:
+        mood_history = await self._mood_history_repository.get_by_id(
+            data.mood_history_id
+        )
+        if mood_history is None:
+            raise EntityNotFoundException(
+                f"MoodHistory {data.mood_history_id} not found"
+            )
+
+        if data.mood is not None:
+            mood_history.mood = data.mood
+        if data.trigger is not None:
+            mood_history.trigger = data.trigger
+
+        return await self._mood_history_repository.update(mood_history)
+
+
 class DeleteMoodHistoryUseCase:
     def __init__(self, mood_history_repository: MoodHistoryRepository) -> None:
         self._mood_history_repository = mood_history_repository

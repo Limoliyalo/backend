@@ -26,6 +26,14 @@ class UpdateUserSettingsInput:
     do_not_disturb: bool | None = None
 
 
+class ListUserSettingsUseCase:
+    def __init__(self, settings_repository: UserSettingsRepository) -> None:
+        self._settings_repository = settings_repository
+
+    async def execute(self) -> list[UserSettings]:
+        return await self._settings_repository.list_all()
+
+
 class GetUserSettingsUseCase:
     def __init__(self, settings_repository: UserSettingsRepository) -> None:
         self._settings_repository = settings_repository
@@ -68,3 +76,14 @@ class UpsertUserSettingsUseCase:
                 settings.toggle_do_not_disturb(data.do_not_disturb)
 
         return await self._settings_repository.upsert(settings)
+
+
+class DeleteUserSettingsUseCase:
+    def __init__(self, settings_repository: UserSettingsRepository) -> None:
+        self._settings_repository = settings_repository
+
+    async def execute(self, user_tg_id: int) -> None:
+        settings = await self._settings_repository.get_by_user(TelegramId(user_tg_id))
+        if settings is None:
+            raise EntityNotFoundException(f"Settings for user {user_tg_id} not found")
+        await self._settings_repository.delete(settings.id)
