@@ -1,0 +1,65 @@
+from collections.abc import Callable
+import uuid
+
+from sqlalchemy import select
+
+from src.adapters.database.models.transactions import TransactionModel
+from src.adapters.database.uow import AbstractUnitOfWork
+from src.adapters.repositories.base import SQLAlchemyRepository
+from src.domain.entities.healthity.transactions import Transaction
+from src.domain.value_objects.telegram_id import TelegramId
+from src.ports.repositories.healthity.transactions import TransactionsRepository
+
+
+class SQLAlchemyTransactionsRepository(
+    SQLAlchemyRepository[TransactionModel], TransactionsRepository
+):
+    model = TransactionModel
+
+    def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
+        super().__init__(uow_factory)
+
+    async def list_for_user(self, user_tg_id: TelegramId) -> list[Transaction]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(TransactionModel)
+                .where(TransactionModel.user_tg_id == user_tg_id.value)
+                .order_by(TransactionModel.timestamp.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def add(self, transaction: Transaction) -> Transaction:
+        model = TransactionModel(
+            id=transaction.id,
+            user_tg_id=transaction.user_tg_id.value,
+            amount=transaction.amount,
+            balance_after=transaction.balance_after,
+            type=transaction.type,
+            related_item_id=transaction.related_item_id,
+            related_background_id=transaction.related_background_id,
+            description=transaction.description,
+            timestamp=transaction.timestamp,
+        )
+        saved_model = await super().add(model)
+        return self._to_domain(saved_model)
+
+    async def get(self, transaction_id: uuid.UUID) -> Transaction | None:
+        model = await super().get(transaction_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    @staticmethod
+    def _to_domain(model: TransactionModel) -> Transaction:
+        return Transaction(
+            id=model.id,
+            user_tg_id=TelegramId(model.user_tg_id),
+            amount=model.amount,
+            balance_after=model.balance_after,
+            type=model.type,
+            related_item_id=model.related_item_id,
+            related_background_id=model.related_background_id,
+            description=model.description,
+            timestamp=model.timestamp,
+        )

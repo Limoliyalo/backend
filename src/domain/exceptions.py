@@ -54,10 +54,3 @@ class UserNotFoundException(DomainException):
         self.tg_id = tg_id
         self.message = f"User with tg_id {tg_id} not found"
         super().__init__(self.message)
-
-
-class PictureNotFoundException(DomainException):
-    def __init__(self, picture_id: int | None = None, message: str | None = None):
-        self.picture_id = picture_id
-        self.message = message or f"Picture with id {picture_id} not found"
-        super().__init__(self.message)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.domain.entities.user import User
+from src.domain.entities.healthity.users import User
 from src.domain.value_objects.telegram_id import TelegramId
 
 
