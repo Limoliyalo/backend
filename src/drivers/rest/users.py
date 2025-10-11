@@ -55,28 +55,30 @@ async def get_user(
     use_case: GetUserUseCase = Depends(Provide[ApplicationContainer.get_user_use_case]),
 ):
     """Получить пользователя по Telegram ID"""
-    logger.info({
-        "action": "get_user",
-        "stage": "start",
-        "data": {"telegram_id": telegram_id}
-    })
-    
+    logger.info(
+        {"action": "get_user", "stage": "start", "data": {"telegram_id": telegram_id}}
+    )
+
     try:
         user = await use_case.execute(telegram_id)
         response = UserResponse.model_validate(user)
-        
-        logger.info({
-            "action": "get_user",
-            "stage": "end",
-            "data": {"telegram_id": telegram_id, "success": True}
-        })
+
+        logger.info(
+            {
+                "action": "get_user",
+                "stage": "end",
+                "data": {"telegram_id": telegram_id, "success": True},
+            }
+        )
         return response
     except UserNotFoundException as e:
-        logger.warning({
-            "action": "get_user",
-            "stage": "not_found",
-            "data": {"telegram_id": telegram_id}
-        })
+        logger.warning(
+            {
+                "action": "get_user",
+                "stage": "not_found",
+                "data": {"telegram_id": telegram_id},
+            }
+        )
         raise NotFoundException(detail=str(e))
 
 
@@ -89,16 +91,18 @@ async def create_user(
     ),
 ):
     """Создать нового пользователя"""
-    logger.info({
-        "action": "create_user",
-        "stage": "start",
-        "data": {
-            "telegram_id": data.telegram_id,
-            "is_active": data.is_active,
-            "balance": data.balance
+    logger.info(
+        {
+            "action": "create_user",
+            "stage": "start",
+            "data": {
+                "telegram_id": data.telegram_id,
+                "is_active": data.is_active,
+                "balance": data.balance,
+            },
         }
-    })
-    
+    )
+
     try:
         input_data = CreateUserInput(
             telegram_id=data.telegram_id,
@@ -108,19 +112,23 @@ async def create_user(
         )
         user = await use_case.execute(input_data)
         response = UserResponse.model_validate(user)
-        
-        logger.info({
-            "action": "create_user",
-            "stage": "end",
-            "data": {"telegram_id": data.telegram_id, "success": True}
-        })
+
+        logger.info(
+            {
+                "action": "create_user",
+                "stage": "end",
+                "data": {"telegram_id": data.telegram_id, "success": True},
+            }
+        )
         return response
     except ValueError as e:
-        logger.error({
-            "action": "create_user",
-            "stage": "error",
-            "data": {"telegram_id": data.telegram_id, "error": str(e)}
-        })
+        logger.error(
+            {
+                "action": "create_user",
+                "stage": "error",
+                "data": {"telegram_id": data.telegram_id, "error": str(e)},
+            }
+        )
         raise BadRequestException(detail=str(e))
 
 

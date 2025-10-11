@@ -41,31 +41,37 @@ class GetUserUseCase:
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def execute(self, telegram_id: int) -> User:
-        self.logger.info({
-            "action": "GetUserUseCase.execute",
-            "stage": "start",
-            "data": {"telegram_id": telegram_id}
-        })
-        
-        user = await self._users_repository.get_by_telegram_id(TelegramId(telegram_id))
-        
-        if user is None:
-            self.logger.warning({
+        self.logger.info(
+            {
                 "action": "GetUserUseCase.execute",
-                "stage": "not_found",
-                "data": {"telegram_id": telegram_id}
-            })
-            raise UserNotFoundException(telegram_id)
-        
-        self.logger.info({
-            "action": "GetUserUseCase.execute",
-            "stage": "end",
-            "data": {
-                "telegram_id": telegram_id,
-                "is_active": user.is_active,
-                "balance": user.balance
+                "stage": "start",
+                "data": {"telegram_id": telegram_id},
             }
-        })
+        )
+
+        user = await self._users_repository.get_by_telegram_id(TelegramId(telegram_id))
+
+        if user is None:
+            self.logger.warning(
+                {
+                    "action": "GetUserUseCase.execute",
+                    "stage": "not_found",
+                    "data": {"telegram_id": telegram_id},
+                }
+            )
+            raise UserNotFoundException(telegram_id)
+
+        self.logger.info(
+            {
+                "action": "GetUserUseCase.execute",
+                "stage": "end",
+                "data": {
+                    "telegram_id": telegram_id,
+                    "is_active": user.is_active,
+                    "balance": user.balance,
+                },
+            }
+        )
         return user
 
 
@@ -78,32 +84,38 @@ class CreateUserUseCase:
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def execute(self, data: CreateUserInput) -> User:
-        self.logger.info({
-            "action": "CreateUserUseCase.execute",
-            "stage": "start",
-            "data": {
-                "telegram_id": data.telegram_id,
-                "is_active": data.is_active,
-                "balance": data.balance,
-                "has_password": data.password is not None
+        self.logger.info(
+            {
+                "action": "CreateUserUseCase.execute",
+                "stage": "start",
+                "data": {
+                    "telegram_id": data.telegram_id,
+                    "is_active": data.is_active,
+                    "balance": data.balance,
+                    "has_password": data.password is not None,
+                },
             }
-        })
-        
+        )
+
         telegram_id = TelegramId(data.telegram_id)
-        
-        self.logger.debug({
-            "action": "CreateUserUseCase.execute",
-            "stage": "checking_existing",
-            "data": {"telegram_id": data.telegram_id}
-        })
+
+        self.logger.debug(
+            {
+                "action": "CreateUserUseCase.execute",
+                "stage": "checking_existing",
+                "data": {"telegram_id": data.telegram_id},
+            }
+        )
         existing = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if existing:
-            self.logger.error({
-                "action": "CreateUserUseCase.execute",
-                "stage": "already_exists",
-                "data": {"telegram_id": data.telegram_id}
-            })
+            self.logger.error(
+                {
+                    "action": "CreateUserUseCase.execute",
+                    "stage": "already_exists",
+                    "data": {"telegram_id": data.telegram_id},
+                }
+            )
             raise ValueError(f"User with telegram_id {data.telegram_id} already exists")
 
         # Hash password if provided
@@ -112,12 +124,14 @@ class CreateUserUseCase:
             if data.password
             else None
         )
-        
-        self.logger.debug({
-            "action": "CreateUserUseCase.execute",
-            "stage": "password_hashed",
-            "data": {"has_password": password_hash is not None}
-        })
+
+        self.logger.debug(
+            {
+                "action": "CreateUserUseCase.execute",
+                "stage": "password_hashed",
+                "data": {"has_password": password_hash is not None},
+            }
+        )
 
         user = User(
             telegram_id=telegram_id,
@@ -126,22 +140,26 @@ class CreateUserUseCase:
             balance=data.balance,
         )
 
-        self.logger.debug({
-            "action": "CreateUserUseCase.execute",
-            "stage": "saving_to_db",
-            "data": {"telegram_id": data.telegram_id}
-        })
-        created_user = await self._users_repository.create(user)
-        
-        self.logger.info({
-            "action": "CreateUserUseCase.execute",
-            "stage": "end",
-            "data": {
-                "telegram_id": data.telegram_id,
-                "is_active": created_user.is_active,
-                "balance": created_user.balance
+        self.logger.debug(
+            {
+                "action": "CreateUserUseCase.execute",
+                "stage": "saving_to_db",
+                "data": {"telegram_id": data.telegram_id},
             }
-        })
+        )
+        created_user = await self._users_repository.create(user)
+
+        self.logger.info(
+            {
+                "action": "CreateUserUseCase.execute",
+                "stage": "end",
+                "data": {
+                    "telegram_id": data.telegram_id,
+                    "is_active": created_user.is_active,
+                    "balance": created_user.balance,
+                },
+            }
+        )
         return created_user
 
 
