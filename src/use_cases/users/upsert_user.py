@@ -1,9 +1,6 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
-from src.domain.entities.user import User
-from src.domain.value_objects.coin import Coin
-from src.domain.value_objects.experience import Experience
+from src.domain.entities.healthity.users import User
 from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.users import UsersRepository
 
@@ -11,12 +8,9 @@ from src.ports.repositories.users import UsersRepository
 @dataclass
 class UpsertUserInput:
     telegram_id: int
-    timer: int
-    experience: int
-    coins: int
-    username: str
-    level_cnt: int = 0
-    message_count: int = 0
+    password_hash: str | None = None
+    is_active: bool = True
+    balance: int = 0
 
 
 class UpsertUserUseCase:
@@ -29,17 +23,14 @@ class UpsertUserUseCase:
 
         user = User(
             telegram_id=telegram_id,
-            username=data.username,
-            time_to_send_message=data.timer,
-            experience=Experience(data.experience),
-            coins=Coin(data.coins),
-            level=data.level_cnt,
-            messages_count=data.message_count,
+            password_hash=data.password_hash,
+            is_active=data.is_active,
+            balance=data.balance,
         )
 
         if existing:
             user.created_at = existing.created_at
-            user.updated_at = datetime.now(timezone.utc)
+            user.updated_at = existing.updated_at
             return await self._users_repository.update(user)
 
         return await self._users_repository.create(user)
