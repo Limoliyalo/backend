@@ -2,6 +2,10 @@ from dependency_injector import containers, providers
 
 from src.adapters.database.session import session_manager
 from src.adapters.database.uow import SQLAlchemyUnitOfWork
+from src.adapters.repositories.auth import (
+    SQLAlchemyBlacklistedTokensRepository,
+    SQLAlchemyRefreshTokensRepository,
+)
 from src.adapters.repositories.healthity import (
     SQLAlchemyActivityTypesRepository,
     SQLAlchemyBackgroundsRepository,
@@ -19,8 +23,13 @@ from src.adapters.repositories.healthity import (
     SQLAlchemyUserSettingsRepository,
     SQLAlchemyUsersRepository,
 )
+from src.core.auth.jwt_service import JwtService
+from src.core.auth.providers import (
+    AccessTokenPayloadProvider,
+    CurrentUserProvider,
+)
 from src.core.settings import settings
-from src.core.security import PasswordHasher
+from src.core.security import PasswordHasher, TokenHasher
 from src.use_cases.users.manage_users import (
     GetUserUseCase,
     CreateUserUseCase,
@@ -28,6 +37,7 @@ from src.use_cases.users.manage_users import (
     UpdateUserUseCase,
     DeleteUserUseCase,
 )
+from src.use_cases.auth import LoginUseCase, LogoutUseCase, RefreshUseCase
 from src.use_cases.characters.create_character import CreateCharacterUseCase
 from src.use_cases.characters.get_character import (
     GetCharacterByIdUseCase,
@@ -133,10 +143,14 @@ from src.use_cases.item_background_positions.manage_positions import (
 
 
 class ApplicationContainer(containers.DeclarativeContainer):
-    wiring_config = containers.WiringConfiguration(packages=["src.drivers.rest"])
+    wiring_config = containers.WiringConfiguration(
+        packages=["src.drivers.rest", "src.core.auth"]
+    )
 
     settings_provider = providers.Object(settings)
     password_hasher = providers.Singleton(PasswordHasher)
+    token_hasher = providers.Singleton(TokenHasher)
+    jwt_service = providers.Singleton(JwtService)
 
     session_factory = providers.Object(session_manager.async_session)
     unit_of_work = providers.Factory(
@@ -145,6 +159,12 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     users_repository = providers.Factory(
         SQLAlchemyUsersRepository, uow_factory=unit_of_work.provider
+    )
+    refresh_tokens_repository = providers.Factory(
+        SQLAlchemyRefreshTokensRepository, uow_factory=unit_of_work.provider
+    )
+    blacklisted_tokens_repository = providers.Factory(
+        SQLAlchemyBlacklistedTokensRepository, uow_factory=unit_of_work.provider
     )
     user_settings_repository = providers.Factory(
         SQLAlchemyUserSettingsRepository, uow_factory=unit_of_work.provider
@@ -208,6 +228,39 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     delete_user_use_case = providers.Factory(
         DeleteUserUseCase, users_repository=users_repository
+    )
+
+    # Auth providers
+    access_token_payload_provider = providers.Factory(
+        AccessTokenPayloadProvider,
+        jwt_service=jwt_service,
+        blacklisted_tokens_repository=blacklisted_tokens_repository,
+    )
+    current_user_provider = providers.Factory(
+        CurrentUserProvider, payload_provider=access_token_payload_provider
+    )
+
+    login_use_case = providers.Factory(
+        LoginUseCase,
+        users_repository=users_repository,
+        refresh_tokens_repository=refresh_tokens_repository,
+        password_hasher=password_hasher,
+        token_hasher=token_hasher,
+        jwt_service=jwt_service,
+    )
+    refresh_use_case = providers.Factory(
+        RefreshUseCase,
+        users_repository=users_repository,
+        refresh_tokens_repository=refresh_tokens_repository,
+        token_hasher=token_hasher,
+        jwt_service=jwt_service,
+    )
+    logout_use_case = providers.Factory(
+        LogoutUseCase,
+        refresh_tokens_repository=refresh_tokens_repository,
+        blacklisted_tokens_repository=blacklisted_tokens_repository,
+        token_hasher=token_hasher,
+        jwt_service=jwt_service,
     )
 
     # Character use cases

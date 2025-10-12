@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/transactions", tags=["Transactions"])
 @inject
 async def list_transactions(
     user_tg_id: int = Query(..., description="Telegram ID пользователя"),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListTransactionsForUserUseCase = Depends(
         Provide[ApplicationContainer.list_transactions_for_user_use_case]
     ),
@@ -43,7 +43,7 @@ async def list_transactions(
 @inject
 async def get_transaction(
     transaction_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetTransactionUseCase = Depends(
         Provide[ApplicationContainer.get_transaction_use_case]
     ),
@@ -62,7 +62,7 @@ async def get_transaction(
 @inject
 async def create_transaction(
     data: TransactionCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateTransactionUseCase = Depends(
         Provide[ApplicationContainer.create_transaction_use_case]
     ),
@@ -86,7 +86,7 @@ async def create_transaction(
 async def update_transaction(
     transaction_id: UUID,
     data: TransactionUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateTransactionUseCase = Depends(
         Provide[ApplicationContainer.update_transaction_use_case]
     ),
@@ -109,7 +109,7 @@ async def update_transaction(
 @inject
 async def delete_transaction(
     transaction_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteTransactionUseCase = Depends(
         Provide[ApplicationContainer.delete_transaction_use_case]
     ),

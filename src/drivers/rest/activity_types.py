@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.activities import (
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/activity-types", tags=["Activity Types"])
 )
 @inject
 async def list_activity_types(
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListActivityTypesUseCase = Depends(
         Provide[ApplicationContainer.list_activity_types_use_case]
     ),
@@ -48,7 +48,7 @@ async def list_activity_types(
 @inject
 async def get_activity_type(
     activity_type_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetActivityTypeUseCase = Depends(
         Provide[ApplicationContainer.get_activity_type_use_case]
     ),
@@ -67,7 +67,7 @@ async def get_activity_type(
 @inject
 async def create_activity_type(
     data: ActivityTypeCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateActivityTypeUseCase = Depends(
         Provide[ApplicationContainer.create_activity_type_use_case]
     ),
@@ -92,7 +92,7 @@ async def create_activity_type(
 async def update_activity_type(
     activity_type_id: UUID,
     data: ActivityTypeUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateActivityTypeUseCase = Depends(
         Provide[ApplicationContainer.update_activity_type_use_case]
     ),
@@ -116,7 +116,7 @@ async def update_activity_type(
 @inject
 async def delete_activity_type(
     activity_type_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteActivityTypeUseCase = Depends(
         Provide[ApplicationContainer.delete_activity_type_use_case]
     ),

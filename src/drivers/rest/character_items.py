@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.character_items import (
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/character-items", tags=["Character Items"])
 @inject
 async def list_character_items(
     character_id: UUID = Query(..., description="ID персонажа"),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListCharacterItemsUseCase = Depends(
         Provide[ApplicationContainer.list_character_items_use_case]
     ),
@@ -43,7 +43,7 @@ async def list_character_items(
 @inject
 async def get_character_item(
     character_item_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetCharacterItemUseCase = Depends(
         Provide[ApplicationContainer.get_character_item_use_case]
     ),
@@ -62,7 +62,7 @@ async def get_character_item(
 @inject
 async def create_character_item(
     data: CharacterItemPurchase,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: PurchaseItemUseCase = Depends(
         Provide[ApplicationContainer.purchase_item_use_case]
     ),
@@ -82,7 +82,7 @@ async def create_character_item(
 async def update_character_item(
     character_item_id: UUID,
     data: CharacterItemUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateCharacterItemUseCase = Depends(
         Provide[ApplicationContainer.update_character_item_use_case]
     ),
@@ -103,7 +103,7 @@ async def update_character_item(
 @inject
 async def delete_character_item(
     character_item_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: RemoveCharacterItemUseCase = Depends(
         Provide[ApplicationContainer.remove_character_item_use_case]
     ),

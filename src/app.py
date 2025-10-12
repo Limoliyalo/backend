@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from src.adapters.database.session import session_manager
 from src.container import ApplicationContainer
 from src.drivers.rest import (
+    auth,
     users,
     characters,
     items,
@@ -35,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
     container = ApplicationContainer()
-    container.wire(packages=["src.drivers.rest", "src.core.auth"])
+    container.wire(
+        packages=["src.drivers.rest"],
+        modules=["src.core.auth.admin", "src.core.auth.dependencies"],
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -72,6 +76,7 @@ def create_app() -> FastAPI:
     )
 
     # Register routers
+    app.include_router(auth.router, prefix="/api/v1")
     app.include_router(users.router, prefix="/api/v1")
     app.include_router(characters.router, prefix="/api/v1")
     app.include_router(items.router, prefix="/api/v1")

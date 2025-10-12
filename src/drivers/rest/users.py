@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import UserNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.users import (
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get("/admin", response_model=list[UserResponse], status_code=status.HTTP_200_OK)
 @inject
 async def list_users(
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     use_case: ListUsersUseCase = Depends(
@@ -47,7 +47,7 @@ async def list_users(
 @inject
 async def get_user(
     telegram_id: int,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetUserUseCase = Depends(Provide[ApplicationContainer.get_user_use_case]),
 ):
     """Получить пользователя по Telegram ID (требуется админ-доступ)"""
@@ -85,7 +85,7 @@ async def create_user(
     use_case: CreateUserUseCase = Depends(
         Provide[ApplicationContainer.create_user_use_case]
     ),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
 ):
     """Создать нового пользователя (требуется админ-доступ)"""
     logger.info(
@@ -136,7 +136,7 @@ async def create_user(
 async def update_user(
     telegram_id: int,
     data: UserUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateUserUseCase = Depends(
         Provide[ApplicationContainer.update_user_use_case]
     ),
@@ -161,7 +161,7 @@ async def update_user(
 @inject
 async def delete_user(
     telegram_id: int,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteUserUseCase = Depends(
         Provide[ApplicationContainer.delete_user_use_case]
     ),

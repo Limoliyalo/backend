@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.catalog import ItemCreate, ItemResponse, ItemUpdate
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/items", tags=["Items"])
 async def list_items(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListItemsUseCase = Depends(
         Provide[ApplicationContainer.list_items_use_case]
     ),
@@ -40,7 +40,7 @@ async def list_items(
 @inject
 async def get_item(
     item_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetItemUseCase = Depends(Provide[ApplicationContainer.get_item_use_case]),
 ):
     """Получить предмет по ID (требуется админ-доступ)"""
@@ -55,7 +55,7 @@ async def get_item(
 @inject
 async def create_item(
     data: ItemCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateItemUseCase = Depends(
         Provide[ApplicationContainer.create_item_use_case]
     ),
@@ -78,7 +78,7 @@ async def create_item(
 async def update_item(
     item_id: UUID,
     data: ItemUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateItemUseCase = Depends(
         Provide[ApplicationContainer.update_item_use_case]
     ),
@@ -103,7 +103,7 @@ async def update_item(
 @inject
 async def delete_item(
     item_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteItemUseCase = Depends(
         Provide[ApplicationContainer.delete_item_use_case]
     ),

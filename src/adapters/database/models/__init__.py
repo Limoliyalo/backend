@@ -1,8 +1,10 @@
 from src.adapters.database.base import Base
 from src.adapters.database.models import (
     activities,
+    blacklisted_tokens,
     catalog,
     characters,
+    refresh_token,
     transactions,
     user,
     user_friends,
@@ -18,4 +20,6 @@ __all__ = (
     "characters",
     "activities",
     "transactions",
+    "refresh_token",
+    "blacklisted_tokens",
 )

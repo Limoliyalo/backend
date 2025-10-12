@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.item_background_positions import (
@@ -36,7 +36,7 @@ router = APIRouter(
 async def list_positions_for_item(
     item_id: UUID = Query(..., description="ID предмета"),
     background_id: UUID = Query(..., description="ID фона"),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListPositionsForItemUseCase = Depends(
         Provide[ApplicationContainer.list_positions_for_item_use_case]
     ),
@@ -54,7 +54,7 @@ async def list_positions_for_item(
 @inject
 async def get_position(
     position_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetPositionUseCase = Depends(
         Provide[ApplicationContainer.get_position_use_case]
     ),
@@ -75,7 +75,7 @@ async def get_position(
 @inject
 async def create_position(
     data: ItemBackgroundPositionCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreatePositionUseCase = Depends(
         Provide[ApplicationContainer.create_position_use_case]
     ),
@@ -101,7 +101,7 @@ async def create_position(
 async def update_position(
     position_id: UUID,
     data: ItemBackgroundPositionUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdatePositionUseCase = Depends(
         Provide[ApplicationContainer.update_position_use_case]
     ),
@@ -124,7 +124,7 @@ async def update_position(
 @inject
 async def delete_position(
     position_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeletePositionUseCase = Depends(
         Provide[ApplicationContainer.delete_position_use_case]
     ),

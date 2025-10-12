@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.item_categories import (
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/item-categories", tags=["Item Categories"])
 )
 @inject
 async def list_item_categories(
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListItemCategoriesUseCase = Depends(
         Provide[ApplicationContainer.list_item_categories_use_case]
     ),
@@ -48,7 +48,7 @@ async def list_item_categories(
 @inject
 async def get_item_category(
     category_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetItemCategoryUseCase = Depends(
         Provide[ApplicationContainer.get_item_category_use_case]
     ),
@@ -67,7 +67,7 @@ async def get_item_category(
 @inject
 async def create_item_category(
     data: ItemCategoryCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateItemCategoryUseCase = Depends(
         Provide[ApplicationContainer.create_item_category_use_case]
     ),
@@ -87,7 +87,7 @@ async def create_item_category(
 async def update_item_category(
     category_id: UUID,
     data: ItemCategoryUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateItemCategoryUseCase = Depends(
         Provide[ApplicationContainer.update_item_category_use_case]
     ),
@@ -105,7 +105,7 @@ async def update_item_category(
 @inject
 async def delete_item_category(
     category_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteItemCategoryUseCase = Depends(
         Provide[ApplicationContainer.delete_item_category_use_case]
     ),

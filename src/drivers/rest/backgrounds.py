@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.catalog import (
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/backgrounds", tags=["Backgrounds"])
 @router.get("/admin", response_model=list[BackgroundResponse])
 @inject
 async def list_backgrounds(
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     use_case: ListBackgroundsUseCase = Depends(
@@ -44,7 +44,7 @@ async def list_backgrounds(
 @inject
 async def get_background(
     background_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetBackgroundUseCase = Depends(
         Provide[ApplicationContainer.get_background_use_case]
     ),
@@ -63,7 +63,7 @@ async def get_background(
 @inject
 async def create_background(
     data: BackgroundCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateBackgroundUseCase = Depends(
         Provide[ApplicationContainer.create_background_use_case]
     ),
@@ -86,7 +86,7 @@ async def create_background(
 async def update_background(
     background_id: UUID,
     data: BackgroundUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateBackgroundUseCase = Depends(
         Provide[ApplicationContainer.update_background_use_case]
     ),
@@ -112,7 +112,7 @@ async def update_background(
 @inject
 async def delete_background(
     background_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteBackgroundUseCase = Depends(
         Provide[ApplicationContainer.delete_background_use_case]
     ),
