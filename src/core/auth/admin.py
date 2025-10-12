@@ -8,7 +8,7 @@ from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from src.container import ApplicationContainer
-from src.core.security import password_hasher
+from src.core.security import PasswordHasher
 from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import ForbiddenException, UnauthorizedException
 from src.ports.repositories.users import UsersRepository
@@ -19,31 +19,15 @@ security = HTTPBasic()
 
 
 @inject
-async def get_admin_user(
+async def admin_user_provider(
     credentials: Annotated[HTTPBasicCredentials, Depends(security)],
     users_repository: UsersRepository = Depends(
         Provide[ApplicationContainer.users_repository]
     ),
+    password_hasher: PasswordHasher = Depends(
+        Provide[ApplicationContainer.password_hasher]
+    ),
 ) -> int:
-    """
-    Проверяет admin credentials и возвращает telegram_id админа.
-
-    Логика:
-    1. username = telegram_id пользователя
-    2. Проверяем, что пользователь существует и является админом (is_admin=True)
-    3. Проверяем пароль
-
-    Args:
-        credentials: HTTP Basic Auth credentials
-        users_repository: Репозиторий пользователей
-
-    Returns:
-        telegram_id админа
-
-    Raises:
-        UnauthorizedException: Если учетные данные неверны
-        ForbiddenException: Если пользователь не является админом
-    """
     try:
         telegram_id = int(credentials.username)
     except ValueError:
@@ -55,11 +39,11 @@ async def get_admin_user(
             }
         )
         raise UnauthorizedException(
-            detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
         )
 
     try:
-        # Получаем пользователя из базы данных
         user = await users_repository.get_by_telegram_id(TelegramId(telegram_id))
     except Exception:
         logger.warning(
@@ -70,10 +54,10 @@ async def get_admin_user(
             }
         )
         raise UnauthorizedException(
-            detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
         )
 
-    # Проверка, что пользователь является админом
     if not user.is_admin:
         logger.warning(
             {
@@ -84,7 +68,6 @@ async def get_admin_user(
         )
         raise ForbiddenException(detail="Access denied: admin privileges required")
 
-    # Проверка пароля
     if not user.password_hash:
         logger.warning(
             {
@@ -94,7 +77,8 @@ async def get_admin_user(
             }
         )
         raise UnauthorizedException(
-            detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
         )
 
     if not password_hasher.verify_password(credentials.password, user.password_hash):
@@ -106,7 +90,8 @@ async def get_admin_user(
             }
         )
         raise UnauthorizedException(
-            detail="Invalid credentials", headers={"WWW-Authenticate": "Basic"}
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
         )
 
     logger.info(

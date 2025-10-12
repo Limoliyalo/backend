@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.character_backgrounds import (
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/character-backgrounds", tags=["Character Backgrounds
 @inject
 async def list_character_backgrounds(
     character_id: UUID = Query(..., description="ID персонажа"),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListCharacterBackgroundsUseCase = Depends(
         Provide[ApplicationContainer.list_character_backgrounds_use_case]
     ),
@@ -45,7 +45,7 @@ async def list_character_backgrounds(
 @inject
 async def get_character_background(
     character_background_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetCharacterBackgroundUseCase = Depends(
         Provide[ApplicationContainer.get_character_background_use_case]
     ),
@@ -66,7 +66,7 @@ async def get_character_background(
 @inject
 async def create_character_background(
     data: CharacterBackgroundPurchase,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: PurchaseBackgroundUseCase = Depends(
         Provide[ApplicationContainer.purchase_background_use_case]
     ),
@@ -88,7 +88,7 @@ async def create_character_background(
 async def update_character_background(
     character_background_id: UUID,
     data: CharacterBackgroundUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateCharacterBackgroundUseCase = Depends(
         Provide[ApplicationContainer.update_character_background_use_case]
     ),
@@ -111,7 +111,7 @@ async def update_character_background(
 @inject
 async def delete_character_background(
     character_background_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: RemoveCharacterBackgroundUseCase = Depends(
         Provide[ApplicationContainer.remove_character_background_use_case]
     ),

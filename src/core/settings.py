@@ -24,7 +24,7 @@ class DatabaseSettings(BaseModel):
 class RedisSettings(BaseModel):
     host: str
     port: int
-    password: str
+    password: str | None = None
 
 
 class RabbitSettings(BaseModel):
@@ -37,6 +37,13 @@ class RabbitSettings(BaseModel):
     @property
     def amqp_url(self) -> str:
         return f"amqp://{self.user}:{self.password}@{self.host}:{self.port}/"
+
+
+class JWTSettings(BaseModel):
+    secret_key: str
+    algorithm: str
+    access_token_expire_minutes: int
+    refresh_token_expire_minutes: int
 
 
 class Settings(BaseSettings):
@@ -58,6 +65,11 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbitmq_default_user: str | None = None
     rabbitmq_default_pass: str | None = None
+
+    jwt_secret_key: str
+    jwt_algorithm: str
+    jwt_access_token_expire_minutes: int
+    jwt_refresh_token_expire_minutes: int
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -91,6 +103,15 @@ class Settings(BaseSettings):
             management_port=self.rabbit_web_port,
             user=self.rabbit_user,
             password=self.rabbit_password,
+        )
+
+    @property
+    def jwt(self) -> JWTSettings:
+        return JWTSettings(
+            secret_key=self.jwt_secret_key,
+            algorithm=self.jwt_algorithm,
+            access_token_expire_minutes=self.jwt_access_token_expire_minutes,
+            refresh_token_expire_minutes=self.jwt_refresh_token_expire_minutes,
         )
 
 

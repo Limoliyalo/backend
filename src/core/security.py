@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import logging
 
 import bcrypt
@@ -43,5 +44,11 @@ class PasswordHasher:
         return hashed.decode("utf-8")
 
 
-# Default password hasher instance
-password_hasher = PasswordHasher()
+class TokenHasher:
+    """Provides deterministic hashing for token values (e.g., refresh tokens)."""
+
+    def hash_token(self, token: str) -> str:
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def verify(self, raw_token: str, hashed_token: str) -> bool:
+        return hmac.compare_digest(self.hash_token(raw_token), hashed_token)

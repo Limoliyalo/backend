@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.activities import (
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/mood-history", tags=["Mood History"])
 async def list_mood_history(
     character_id: UUID = Query(..., description="ID персонажа"),
     limit: int = Query(100, ge=1, le=500),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListMoodHistoryForCharacterUseCase = Depends(
         Provide[ApplicationContainer.list_mood_history_for_character_use_case]
     ),
@@ -52,7 +52,7 @@ async def list_mood_history(
 @inject
 async def get_mood_history(
     mood_history_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.get_mood_history_use_case]
     ),
@@ -71,7 +71,7 @@ async def get_mood_history(
 @inject
 async def create_mood_history(
     data: MoodHistoryCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.create_mood_history_use_case]
     ),
@@ -95,7 +95,7 @@ async def create_mood_history(
 async def update_mood_history(
     mood_history_id: UUID,
     data: MoodHistoryUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.update_mood_history_use_case]
     ),
@@ -117,7 +117,7 @@ async def update_mood_history(
 @inject
 async def delete_mood_history(
     mood_history_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.delete_mood_history_use_case]
     ),

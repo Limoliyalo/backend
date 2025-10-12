@@ -5,7 +5,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.activities import (
@@ -35,7 +35,7 @@ router = APIRouter(prefix="/daily-activities", tags=["Daily Activities"])
 async def list_daily_activities_for_day(
     character_id: UUID,
     day: datetime = Query(..., description="День для получения активностей"),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListDailyActivitiesForDayUseCase = Depends(
         Provide[ApplicationContainer.list_daily_activities_for_day_use_case]
     ),
@@ -52,7 +52,7 @@ async def list_daily_activities_for_day(
 @inject
 async def get_daily_activity(
     activity_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.get_daily_activity_use_case]
     ),
@@ -71,7 +71,7 @@ async def get_daily_activity(
 @inject
 async def create_daily_activity(
     data: DailyActivityCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.create_daily_activity_use_case]
     ),
@@ -94,7 +94,7 @@ async def create_daily_activity(
 async def update_daily_activity(
     activity_id: UUID,
     data: DailyActivityUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.update_daily_activity_use_case]
     ),
@@ -117,7 +117,7 @@ async def update_daily_activity(
 @inject
 async def delete_daily_activity(
     activity_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.delete_daily_activity_use_case]
     ),

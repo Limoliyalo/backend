@@ -2,10 +2,9 @@ from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, status
-
+from src.core.auth.admin import admin_user_provider
 from src.adapters.repositories.exceptions import RepositoryError
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.user_friends import (
@@ -34,7 +33,7 @@ router = APIRouter(prefix="/user-friends", tags=["User Friends"])
 @inject
 async def list_user_friends(
     owner_tg_id: int,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListUserFriendsUseCase = Depends(
         Provide[ApplicationContainer.list_user_friends_use_case]
     ),
@@ -56,7 +55,7 @@ async def list_user_friends(
 @inject
 async def get_user_friend(
     friend_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetUserFriendUseCase = Depends(
         Provide[ApplicationContainer.get_user_friend_use_case]
     ),
@@ -83,7 +82,7 @@ async def get_user_friend(
 async def add_friend(
     owner_tg_id: int,
     data: UserFriendCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: AddFriendUseCase = Depends(
         Provide[ApplicationContainer.add_friend_use_case]
     ),
@@ -109,7 +108,7 @@ async def add_friend(
 async def update_user_friend(
     friend_id: UUID,
     data: UserFriendUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateUserFriendUseCase = Depends(
         Provide[ApplicationContainer.update_user_friend_use_case]
     ),
@@ -138,7 +137,7 @@ async def update_user_friend(
 async def remove_friend(
     owner_tg_id: int,
     friend_tg_id: int,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: RemoveFriendUseCase = Depends(
         Provide[ApplicationContainer.remove_friend_use_case]
     ),

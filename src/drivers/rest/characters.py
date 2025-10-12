@@ -4,7 +4,7 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
-from src.core.auth import get_admin_user
+from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.characters import (
@@ -34,7 +34,7 @@ router = APIRouter(prefix="/characters", tags=["Characters"])
 async def list_characters(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: ListCharactersUseCase = Depends(
         Provide[ApplicationContainer.list_characters_use_case]
     ),
@@ -48,7 +48,7 @@ async def list_characters(
 @inject
 async def get_character(
     character_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: GetCharacterByIdUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_id_use_case]
     ),
@@ -67,7 +67,7 @@ async def get_character(
 @inject
 async def create_character(
     data: CharacterCreate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: CreateCharacterUseCase = Depends(
         Provide[ApplicationContainer.create_character_use_case]
     ),
@@ -90,7 +90,7 @@ async def create_character(
 async def update_character(
     character_id: UUID,
     data: CharacterUpdate,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: UpdateCharacterUseCase = Depends(
         Provide[ApplicationContainer.update_character_use_case]
     ),
@@ -113,7 +113,7 @@ async def update_character(
 @inject
 async def delete_character(
     character_id: UUID,
-    _: int = Depends(get_admin_user),
+    _: int = Depends(admin_user_provider),
     use_case: DeleteCharacterUseCase = Depends(
         Provide[ApplicationContainer.delete_character_use_case]
     ),

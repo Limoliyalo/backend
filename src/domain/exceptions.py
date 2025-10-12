@@ -61,3 +61,33 @@ class UserNotFoundException(EntityNotFoundException):
     def __init__(self, tg_id: int):
         self.tg_id = tg_id
         super().__init__(f"User with tg_id {tg_id} not found")
+
+
+class InvalidCredentialsException(DomainException):
+    def __init__(self, message: str = "Invalid credentials"):
+        super().__init__(message)
+
+
+class InactiveUserException(DomainException):
+    def __init__(self, tg_id: int):
+        super().__init__(f"User with tg_id {tg_id} is inactive")
+
+
+class RefreshTokenNotFoundException(EntityNotFoundException):
+    def __init__(self, jti: str):
+        super().__init__(f"Refresh token with jti {jti} not found")
+
+
+class RefreshTokenRevokedException(DomainException):
+    def __init__(self, jti: str):
+        super().__init__(f"Refresh token with jti {jti} has been revoked")
+
+
+class InvalidTokenException(DomainException):
+    def __init__(self, message: str = "Invalid token"):
+        super().__init__(message)
+
+
+class TokenExpiredException(DomainException):
+    def __init__(self, message: str = "Token expired"):
+        super().__init__(message)
