@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
@@ -5,13 +6,17 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
     MoodHistoryCreate,
     MoodHistoryResponse,
     MoodHistoryUpdate,
 )
+from src.use_cases.characters.get_character import GetCharacterByUserUseCase
+from src.ports.repositories.healthity.activities import MoodHistoryRepository
 from src.use_cases.mood_history.manage_mood_history import (
     CreateMoodHistoryInput,
     CreateMoodHistoryUseCase,
@@ -45,7 +50,7 @@ async def list_mood_history(
 
 
 @router.get(
-    "/admin/{mood_history_id}",
+    "/{mood_history_id}/admin",
     response_model=MoodHistoryResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -87,7 +92,7 @@ async def create_mood_history(
 
 
 @router.patch(
-    "/admin/{mood_history_id}",
+    "/{mood_history_id}/admin",
     response_model=MoodHistoryResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -113,7 +118,7 @@ async def update_mood_history(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{mood_history_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{mood_history_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_mood_history(
     mood_history_id: UUID,
@@ -127,3 +132,85 @@ async def delete_mood_history(
         await use_case.execute(mood_history_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=list[MoodHistoryResponse])
+@inject
+async def list_my_mood_history(
+    limit: int = Query(
+        100,
+        ge=1,
+        le=500,
+        description="Limit (используется только если не указаны даты)",
+    ),
+    start_date: datetime | None = Query(
+        None, description="Начальная дата (включительно)"
+    ),
+    end_date: datetime | None = Query(None, description="Конечная дата (включительно)"),
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    use_case: ListMoodHistoryForCharacterUseCase = Depends(
+        Provide[ApplicationContainer.list_mood_history_for_character_use_case]
+    ),
+    mood_repo: MoodHistoryRepository = Depends(
+        Provide[ApplicationContainer.mood_history_repository]
+    ),
+):
+    """Получить историю настроения текущего пользователя
+
+    Можно фильтровать по диапазону дат или использовать limit.
+    Если указаны start_date и end_date, limit игнорируется.
+    """
+    telegram_id = int(payload.sub)
+    try:
+        # Получить персонажа пользователя
+        character = await get_character_use_case.execute(telegram_id)
+
+        # Фильтрация по датам или limit
+        if start_date and end_date:
+            mood_history = await mood_repo.list_for_date_range(
+                character.id, start_date, end_date
+            )
+        else:
+            mood_history = await use_case.execute(character.id, limit=limit)
+
+        return [MoodHistoryResponse.model_validate(mh) for mh in mood_history]
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.post(
+    "/me", response_model=MoodHistoryResponse, status_code=status.HTTP_201_CREATED
+)
+@inject
+async def create_my_mood_entry(
+    mood: str = Query(..., description="Настроение"),
+    trigger: str | None = Query(None, description="Триггер"),
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    use_case: CreateMoodHistoryUseCase = Depends(
+        Provide[ApplicationContainer.create_mood_history_use_case]
+    ),
+):
+    """Создать запись о настроении для текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        # Получить персонажа пользователя
+        character = await get_character_use_case.execute(telegram_id)
+
+        # Создать запись о настроении
+        input_data = CreateMoodHistoryInput(
+            character_id=character.id,
+            mood=mood,
+            trigger=trigger,
+        )
+        mood_history = await use_case.execute(input_data)
+        return MoodHistoryResponse.model_validate(mood_history)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))

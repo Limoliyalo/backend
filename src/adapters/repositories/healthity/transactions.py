@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import datetime
 import uuid
 
 from sqlalchemy import delete, select
@@ -24,6 +25,37 @@ class SQLAlchemyTransactionsRepository(
             result = await uow.session.execute(
                 select(TransactionModel)
                 .where(TransactionModel.user_tg_id == user_tg_id.value)
+                .order_by(TransactionModel.timestamp.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def list_for_user_by_date_range(
+        self, user_tg_id: TelegramId, start_date: datetime, end_date: datetime
+    ) -> list[Transaction]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(TransactionModel)
+                .where(
+                    TransactionModel.user_tg_id == user_tg_id.value,
+                    TransactionModel.timestamp >= start_date,
+                    TransactionModel.timestamp <= end_date,
+                )
+                .order_by(TransactionModel.timestamp.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def list_for_user_by_type(
+        self, user_tg_id: TelegramId, transaction_type: str
+    ) -> list[Transaction]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(TransactionModel)
+                .where(
+                    TransactionModel.user_tg_id == user_tg_id.value,
+                    TransactionModel.type == transaction_type,
+                )
                 .order_by(TransactionModel.timestamp.desc())
             )
             models = result.scalars().all()

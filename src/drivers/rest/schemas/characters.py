@@ -24,6 +24,20 @@ class CharacterUpdate(BaseModel):
     current_mood: str | None = None
 
 
+class CharacterUserCreate(BaseModel):
+    """Схема для создания персонажа пользователем (только безопасные поля)"""
+
+    name: str | None = None
+    sex: str | None = None
+
+
+class CharacterUserUpdate(BaseModel):
+    """Схема для обновления персонажа пользователем (только безопасные поля)"""
+
+    name: str | None = None
+    sex: str | None = None
+
+
 class CharacterResponse(CharacterBase):
     id: UUID
     user_tg_id: int

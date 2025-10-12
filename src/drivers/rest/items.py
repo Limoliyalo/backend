@@ -13,6 +13,7 @@ from src.use_cases.items.manage_items import (
     CreateItemUseCase,
     DeleteItemUseCase,
     GetItemUseCase,
+    ListAvailableItemsUseCase,
     ListItemsUseCase,
     UpdateItemInput,
     UpdateItemUseCase,
@@ -36,7 +37,7 @@ async def list_items(
     return [ItemResponse.model_validate(item) for item in items]
 
 
-@router.get("/admin/{item_id}", response_model=ItemResponse)
+@router.get("/{item_id}/admin", response_model=ItemResponse)
 @inject
 async def get_item(
     item_id: UUID,
@@ -73,7 +74,7 @@ async def create_item(
     return ItemResponse.model_validate(item)
 
 
-@router.patch("/admin/{item_id}", response_model=ItemResponse)
+@router.patch("/{item_id}/admin", response_model=ItemResponse)
 @inject
 async def update_item(
     item_id: UUID,
@@ -99,7 +100,7 @@ async def update_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{item_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_item(
     item_id: UUID,
@@ -113,3 +114,15 @@ async def delete_item(
         await use_case.execute(item_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/catalog", response_model=list[ItemResponse])
+@inject
+async def list_items_catalog(
+    use_case: ListAvailableItemsUseCase = Depends(
+        Provide[ApplicationContainer.list_available_items_use_case]
+    ),
+):
+    """Получить каталог доступных предметов (открытый endpoint)"""
+    items = await use_case.execute()
+    return [ItemResponse.model_validate(item) for item in items]

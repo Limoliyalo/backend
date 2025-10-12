@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.domain.entities.healthity.activities import MoodHistory
 from src.domain.exceptions import EntityNotFoundException
@@ -24,7 +24,7 @@ class CreateMoodHistoryUseCase:
             character_id=data.character_id,
             mood=data.mood,
             trigger=data.trigger,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         return await self._mood_history_repository.add(mood_history)
 

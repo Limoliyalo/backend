@@ -17,6 +17,7 @@ from src.use_cases.backgrounds.manage_backgrounds import (
     CreateBackgroundUseCase,
     DeleteBackgroundUseCase,
     GetBackgroundUseCase,
+    ListAvailableBackgroundsUseCase,
     ListBackgroundsUseCase,
     UpdateBackgroundInput,
     UpdateBackgroundUseCase,
@@ -40,7 +41,7 @@ async def list_backgrounds(
     return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
 
 
-@router.get("/admin/{background_id}", response_model=BackgroundResponse)
+@router.get("/{background_id}/admin", response_model=BackgroundResponse)
 @inject
 async def get_background(
     background_id: UUID,
@@ -81,7 +82,7 @@ async def create_background(
     return BackgroundResponse.model_validate(background)
 
 
-@router.patch("/admin/{background_id}", response_model=BackgroundResponse)
+@router.patch("/{background_id}/admin", response_model=BackgroundResponse)
 @inject
 async def update_background(
     background_id: UUID,
@@ -108,7 +109,7 @@ async def update_background(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{background_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{background_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_background(
     background_id: UUID,
@@ -122,3 +123,15 @@ async def delete_background(
         await use_case.execute(background_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/catalog", response_model=list[BackgroundResponse])
+@inject
+async def list_backgrounds_catalog(
+    use_case: ListAvailableBackgroundsUseCase = Depends(
+        Provide[ApplicationContainer.list_available_backgrounds_use_case]
+    ),
+):
+    """Получить каталог доступных фонов (открытый endpoint)"""
+    backgrounds = await use_case.execute()
+    return [BackgroundResponse.model_validate(bg) for bg in backgrounds]

@@ -32,6 +32,12 @@ class DailyActivitiesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
+    ) -> list[DailyActivity]:
+        raise NotImplementedError
+
+    @abstractmethod
     async def upsert(self, activity: DailyActivity) -> DailyActivity:
         raise NotImplementedError
 
@@ -41,6 +47,12 @@ class DailyProgressRepository(ABC):
     async def get_for_day(
         self, character_id: uuid.UUID, day: datetime
     ) -> DailyProgress | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
+    ) -> list[DailyProgress]:
         raise NotImplementedError
 
     @abstractmethod
@@ -58,6 +70,12 @@ class MoodHistoryRepository(ABC):
     @abstractmethod
     async def list_for_character(
         self, character_id: uuid.UUID, limit: int = 100
+    ) -> list[MoodHistory]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
     ) -> list[MoodHistory]:
         raise NotImplementedError
 
