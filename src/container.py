@@ -36,6 +36,9 @@ from src.use_cases.users.manage_users import (
     ListUsersUseCase,
     UpdateUserUseCase,
     DeleteUserUseCase,
+    DepositUseCase,
+    WithdrawUseCase,
+    ChangePasswordUseCase,
 )
 from src.use_cases.auth import LoginUseCase, LogoutUseCase, RefreshUseCase
 from src.use_cases.characters.create_character import CreateCharacterUseCase
@@ -113,17 +116,25 @@ from src.use_cases.user_friends.manage_user_friends import (
     UpdateUserFriendUseCase,
 )
 from src.use_cases.character_items.manage_character_items import (
+    EquipItemUseCase,
     GetCharacterItemUseCase,
     ListCharacterItemsUseCase,
     PurchaseItemUseCase,
+    PurchaseItemWithBalanceUseCase,
     RemoveCharacterItemUseCase,
+    ToggleFavouriteItemUseCase,
+    UnequipItemUseCase,
     UpdateCharacterItemUseCase,
 )
 from src.use_cases.character_backgrounds.manage_character_backgrounds import (
+    ActivateBackgroundUseCase,
+    DeactivateBackgroundUseCase,
     GetCharacterBackgroundUseCase,
     ListCharacterBackgroundsUseCase,
     PurchaseBackgroundUseCase,
+    PurchaseBackgroundWithBalanceUseCase,
     RemoveCharacterBackgroundUseCase,
+    ToggleFavouriteBackgroundUseCase,
     UpdateCharacterBackgroundUseCase,
 )
 from src.use_cases.item_categories.manage_item_categories import (
@@ -228,6 +239,21 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     delete_user_use_case = providers.Factory(
         DeleteUserUseCase, users_repository=users_repository
+    )
+    deposit_use_case = providers.Factory(
+        DepositUseCase,
+        users_repository=users_repository,
+        transactions_repository=transactions_repository,
+    )
+    withdraw_use_case = providers.Factory(
+        WithdrawUseCase,
+        users_repository=users_repository,
+        transactions_repository=transactions_repository,
+    )
+    change_password_use_case = providers.Factory(
+        ChangePasswordUseCase,
+        users_repository=users_repository,
+        password_hasher=password_hasher,
     )
 
     # Auth providers
@@ -475,6 +501,25 @@ class ApplicationContainer(containers.DeclarativeContainer):
         RemoveCharacterItemUseCase,
         character_items_repository=character_items_repository,
     )
+    equip_item_use_case = providers.Factory(
+        EquipItemUseCase,
+        character_items_repository=character_items_repository,
+    )
+    unequip_item_use_case = providers.Factory(
+        UnequipItemUseCase,
+        character_items_repository=character_items_repository,
+    )
+    toggle_favourite_item_use_case = providers.Factory(
+        ToggleFavouriteItemUseCase,
+        character_items_repository=character_items_repository,
+    )
+    purchase_item_with_balance_use_case = providers.Factory(
+        PurchaseItemWithBalanceUseCase,
+        character_items_repository=character_items_repository,
+        items_repository=items_repository,
+        users_repository=users_repository,
+        transactions_repository=transactions_repository,
+    )
 
     # Character Backgrounds use cases
     list_character_backgrounds_use_case = providers.Factory(
@@ -496,6 +541,25 @@ class ApplicationContainer(containers.DeclarativeContainer):
     remove_character_background_use_case = providers.Factory(
         RemoveCharacterBackgroundUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
+    )
+    activate_background_use_case = providers.Factory(
+        ActivateBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    deactivate_background_use_case = providers.Factory(
+        DeactivateBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    toggle_favourite_background_use_case = providers.Factory(
+        ToggleFavouriteBackgroundUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+    )
+    purchase_background_with_balance_use_case = providers.Factory(
+        PurchaseBackgroundWithBalanceUseCase,
+        character_backgrounds_repository=character_backgrounds_repository,
+        backgrounds_repository=backgrounds_repository,
+        users_repository=users_repository,
+        transactions_repository=transactions_repository,
     )
 
     # Item Categories use cases

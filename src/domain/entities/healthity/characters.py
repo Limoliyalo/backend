@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.domain.value_objects.telegram_id import TelegramId
 
@@ -14,8 +14,8 @@ class Character:
     current_mood: str = "neutral"
     level: int = 1
     total_experience: int = 0
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def set_mood(self, mood: str) -> None:
         self.current_mood = mood
@@ -34,7 +34,7 @@ class Character:
             self.level = expected_level
 
     def touch(self) -> None:
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -44,7 +44,16 @@ class CharacterItem:
     item_id: uuid.UUID
     is_active: bool = False
     is_favourite: bool = False
-    purchased_at: datetime = field(default_factory=datetime.utcnow)
+    purchased_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def equip(self) -> None:
+        self.is_active = True
+
+    def unequip(self) -> None:
+        self.is_active = False
+
+    def toggle_favourite(self) -> None:
+        self.is_favourite = not self.is_favourite
 
 
 @dataclass
@@ -54,7 +63,16 @@ class CharacterBackground:
     background_id: uuid.UUID
     is_active: bool = False
     is_favourite: bool = False
-    purchased_at: datetime = field(default_factory=datetime.utcnow)
+    purchased_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def activate(self) -> None:
+        self.is_active = True
+
+    def deactivate(self) -> None:
+        self.is_active = False
+
+    def toggle_favourite(self) -> None:
+        self.is_favourite = not self.is_favourite
 
 
 @dataclass

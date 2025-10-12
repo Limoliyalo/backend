@@ -55,3 +55,29 @@ class BalanceResponse(BaseModel):
     telegram_id: int
     balance: int
     updated_at: datetime
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1, description="Старый пароль")
+    new_password: str = Field(
+        ..., min_length=6, description="Новый пароль (минимум 6 символов)"
+    )
+
+
+class UserStatisticsResponse(BaseModel):
+    """Статистика пользователя"""
+
+    user_id: int
+    balance: int
+    level: int | None = None
+    total_experience: int | None = None
+    character_name: str | None = None
+    character_sex: str | None = None
+    purchased_items_count: int
+    purchased_backgrounds_count: int
+    mood_entries_count: int
+    activities_count: int
+    total_transactions: int
+    friends_count: int
+
+    model_config = ConfigDict(from_attributes=True)

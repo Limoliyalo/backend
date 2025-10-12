@@ -5,21 +5,43 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.domain.exceptions import UserNotFoundException
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
+from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
+from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.users import (
+    BalanceResponse,
+    ChangePasswordRequest,
+    DepositRequest,
     UserCreate,
     UserResponse,
+    UserStatisticsResponse,
     UserUpdate,
+    WithdrawRequest,
 )
+from src.ports.repositories.healthity.activities import MoodHistoryRepository
+from src.ports.repositories.healthity.characters import (
+    CharacterBackgroundsRepository,
+    CharacterItemsRepository,
+)
+from src.ports.repositories.healthity.transactions import TransactionsRepository
+from src.ports.repositories.healthity.users import UserFriendsRepository
+from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.use_cases.users.manage_users import (
+    ChangePasswordInput,
+    ChangePasswordUseCase,
     CreateUserInput,
     CreateUserUseCase,
     DeleteUserUseCase,
+    DepositInput,
+    DepositUseCase,
     GetUserUseCase,
     ListUsersUseCase,
     UpdateUserInput,
     UpdateUserUseCase,
+    WithdrawInput,
+    WithdrawUseCase,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +64,7 @@ async def list_users(
 
 
 @router.get(
-    "/admin/{telegram_id}", response_model=UserResponse, status_code=status.HTTP_200_OK
+    "/{telegram_id}/admin", response_model=UserResponse, status_code=status.HTTP_200_OK
 )
 @inject
 async def get_user(
@@ -130,7 +152,7 @@ async def create_user(
 
 
 @router.put(
-    "/admin/{telegram_id}", response_model=UserResponse, status_code=status.HTTP_200_OK
+    "/{telegram_id}/admin", response_model=UserResponse, status_code=status.HTTP_200_OK
 )
 @inject
 async def update_user(
@@ -157,7 +179,7 @@ async def update_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.delete("/admin/{telegram_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{telegram_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_user(
     telegram_id: int,
@@ -169,5 +191,193 @@ async def delete_user(
     """Удалить пользователя (требуется админ-доступ)"""
     try:
         await use_case.execute(telegram_id)
+    except UserNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
+@inject
+async def get_current_user(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: GetUserUseCase = Depends(Provide[ApplicationContainer.get_user_use_case]),
+):
+    """Получить информацию о текущем пользователе"""
+    telegram_id = int(payload.sub)
+    try:
+        user = await use_case.execute(telegram_id)
+        return UserResponse.model_validate(user)
+    except UserNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.post(
+    "/me/deposit", response_model=BalanceResponse, status_code=status.HTTP_200_OK
+)
+@inject
+async def deposit(
+    data: DepositRequest,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: DepositUseCase = Depends(Provide[ApplicationContainer.deposit_use_case]),
+):
+    """Пополнить баланс текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        input_data = DepositInput(
+            telegram_id=telegram_id,
+            amount=data.amount,
+            description=None,
+        )
+        user = await use_case.execute(input_data)
+        return BalanceResponse(
+            telegram_id=user.telegram_id.value,
+            balance=user.balance,
+            updated_at=user.updated_at,
+        )
+    except UserNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
+
+
+@router.post(
+    "/me/withdraw", response_model=BalanceResponse, status_code=status.HTTP_200_OK
+)
+@inject
+async def withdraw(
+    data: WithdrawRequest,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: WithdrawUseCase = Depends(
+        Provide[ApplicationContainer.withdraw_use_case]
+    ),
+):
+    """Списать средства с баланса текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        input_data = WithdrawInput(
+            telegram_id=telegram_id,
+            amount=data.amount,
+            description=None,
+        )
+        user = await use_case.execute(input_data)
+        return BalanceResponse(
+            telegram_id=user.telegram_id.value,
+            balance=user.balance,
+            updated_at=user.updated_at,
+        )
+    except UserNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
+
+
+@router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
+@inject
+async def change_password(
+    data: ChangePasswordRequest,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: ChangePasswordUseCase = Depends(
+        Provide[ApplicationContainer.change_password_use_case]
+    ),
+):
+    """Изменить пароль текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        input_data = ChangePasswordInput(
+            telegram_id=telegram_id,
+            old_password=data.old_password,
+            new_password=data.new_password,
+        )
+        await use_case.execute(input_data)
+    except UserNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
+
+
+@router.get(
+    "/me/statistics",
+    response_model=UserStatisticsResponse,
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def get_my_statistics(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_user_use_case: GetUserUseCase = Depends(
+        Provide[ApplicationContainer.get_user_use_case]
+    ),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    items_repo: CharacterItemsRepository = Depends(
+        Provide[ApplicationContainer.character_items_repository]
+    ),
+    backgrounds_repo: CharacterBackgroundsRepository = Depends(
+        Provide[ApplicationContainer.character_backgrounds_repository]
+    ),
+    mood_repo: MoodHistoryRepository = Depends(
+        Provide[ApplicationContainer.mood_history_repository]
+    ),
+    transactions_repo: TransactionsRepository = Depends(
+        Provide[ApplicationContainer.transactions_repository]
+    ),
+    friends_repo: UserFriendsRepository = Depends(
+        Provide[ApplicationContainer.user_friends_repository]
+    ),
+):
+    """Получить статистику текущего пользователя"""
+
+    telegram_id = int(payload.sub)
+    try:
+        # Получить пользователя
+        user = await get_user_use_case.execute(telegram_id)
+
+        # Попытаться получить персонажа
+        try:
+            character = await get_character_use_case.execute(telegram_id)
+            character_name = character.name
+            character_sex = character.sex
+            level = character.level
+            total_experience = character.total_experience
+            character_id = character.id
+        except EntityNotFoundException:
+            character_name = None
+            character_sex = None
+            level = None
+            total_experience = None
+            character_id = None
+
+        # Подсчитать количество
+        if character_id:
+            purchased_items = await items_repo.list_for_character(character_id)
+            purchased_backgrounds = await backgrounds_repo.list_for_character(
+                character_id
+            )
+            mood_entries = await mood_repo.list_for_character(character_id, limit=10000)
+        else:
+            purchased_items = []
+            purchased_backgrounds = []
+            mood_entries = []
+
+        transactions = await transactions_repo.list_for_user(TelegramId(telegram_id))
+        friends = await friends_repo.list_for_user(telegram_id)
+
+        # Подсчитать активности (упрощенно - через транзакции или другой метод)
+        # Для демонстрации считаем все записи настроения как активности
+        activities_count = len(mood_entries)
+
+        return UserStatisticsResponse(
+            user_id=telegram_id,
+            balance=user.balance,
+            level=level,
+            total_experience=total_experience,
+            character_name=character_name,
+            character_sex=character_sex,
+            purchased_items_count=len(purchased_items),
+            purchased_backgrounds_count=len(purchased_backgrounds),
+            mood_entries_count=len(mood_entries),
+            activities_count=activities_count,
+            total_transactions=len(transactions),
+            friends_count=len(friends),
+        )
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))

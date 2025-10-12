@@ -1,10 +1,13 @@
 import logging
+import uuid
 from dataclasses import dataclass
 
 from src.core.security import PasswordHasher
+from src.domain.entities.healthity.transactions import Transaction
 from src.domain.entities.healthity.users import User
 from src.domain.exceptions import UserNotFoundException
 from src.domain.value_objects.telegram_id import TelegramId
+from src.ports.repositories.healthity.transactions import TransactionsRepository
 from src.ports.repositories.users import UsersRepository
 
 
@@ -200,3 +203,181 @@ class DeleteUserUseCase:
         if user is None:
             raise UserNotFoundException(telegram_id)
         await self._users_repository.delete(TelegramId(telegram_id))
+
+
+@dataclass
+class DepositInput:
+    telegram_id: int
+    amount: int
+    description: str | None = None
+
+
+class DepositUseCase:
+    def __init__(
+        self,
+        users_repository: UsersRepository,
+        transactions_repository: TransactionsRepository,
+    ) -> None:
+        self._users_repository = users_repository
+        self._transactions_repository = transactions_repository
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    async def execute(self, data: DepositInput) -> User:
+        self.logger.info(
+            {
+                "action": "DepositUseCase.execute",
+                "stage": "start",
+                "data": {"telegram_id": data.telegram_id, "amount": data.amount},
+            }
+        )
+
+        telegram_id = TelegramId(data.telegram_id)
+        user = await self._users_repository.get_by_telegram_id(telegram_id)
+
+        if user is None:
+            raise UserNotFoundException(data.telegram_id)
+
+        # Пополнить баланс
+        user.deposit(data.amount)
+        updated_user = await self._users_repository.update(user)
+
+        # Создать транзакцию
+        transaction = Transaction(
+            id=uuid.uuid4(),
+            user_tg_id=telegram_id,
+            amount=data.amount,
+            balance_after=updated_user.balance,
+            type="deposit",
+            description=data.description or "Пополнение баланса",
+        )
+        await self._transactions_repository.add(transaction)
+
+        self.logger.info(
+            {
+                "action": "DepositUseCase.execute",
+                "stage": "end",
+                "data": {
+                    "telegram_id": data.telegram_id,
+                    "amount": data.amount,
+                    "new_balance": updated_user.balance,
+                },
+            }
+        )
+        return updated_user
+
+
+@dataclass
+class WithdrawInput:
+    telegram_id: int
+    amount: int
+    description: str | None = None
+
+
+class WithdrawUseCase:
+    def __init__(
+        self,
+        users_repository: UsersRepository,
+        transactions_repository: TransactionsRepository,
+    ) -> None:
+        self._users_repository = users_repository
+        self._transactions_repository = transactions_repository
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    async def execute(self, data: WithdrawInput) -> User:
+        self.logger.info(
+            {
+                "action": "WithdrawUseCase.execute",
+                "stage": "start",
+                "data": {"telegram_id": data.telegram_id, "amount": data.amount},
+            }
+        )
+
+        telegram_id = TelegramId(data.telegram_id)
+        user = await self._users_repository.get_by_telegram_id(telegram_id)
+
+        if user is None:
+            raise UserNotFoundException(data.telegram_id)
+
+        # Списать средства
+        user.withdraw(data.amount)
+        updated_user = await self._users_repository.update(user)
+
+        # Создать транзакцию
+        transaction = Transaction(
+            id=uuid.uuid4(),
+            user_tg_id=telegram_id,
+            amount=-data.amount,
+            balance_after=updated_user.balance,
+            type="withdrawal",
+            description=data.description or "Списание средств",
+        )
+        await self._transactions_repository.add(transaction)
+
+        self.logger.info(
+            {
+                "action": "WithdrawUseCase.execute",
+                "stage": "end",
+                "data": {
+                    "telegram_id": data.telegram_id,
+                    "amount": data.amount,
+                    "new_balance": updated_user.balance,
+                },
+            }
+        )
+        return updated_user
+
+
+@dataclass
+class ChangePasswordInput:
+    telegram_id: int
+    old_password: str
+    new_password: str
+
+
+class ChangePasswordUseCase:
+    def __init__(
+        self,
+        users_repository: UsersRepository,
+        password_hasher: PasswordHasher,
+    ) -> None:
+        self._users_repository = users_repository
+        self._password_hasher = password_hasher
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    async def execute(self, data: ChangePasswordInput) -> User:
+        self.logger.info(
+            {
+                "action": "ChangePasswordUseCase.execute",
+                "stage": "start",
+                "data": {"telegram_id": data.telegram_id},
+            }
+        )
+
+        telegram_id = TelegramId(data.telegram_id)
+        user = await self._users_repository.get_by_telegram_id(telegram_id)
+
+        if user is None:
+            raise UserNotFoundException(data.telegram_id)
+
+        # Проверить старый пароль
+        if user.password_hash is None:
+            raise ValueError("User does not have a password set")
+
+        if not self._password_hasher.verify_password(
+            data.old_password, user.password_hash
+        ):
+            raise ValueError("Old password is incorrect")
+
+        # Установить новый пароль
+        new_password_hash = self._password_hasher.get_password_hash(data.new_password)
+        user.update_password(new_password_hash)
+        updated_user = await self._users_repository.update(user)
+
+        self.logger.info(
+            {
+                "action": "ChangePasswordUseCase.execute",
+                "stage": "end",
+                "data": {"telegram_id": data.telegram_id},
+            }
+        )
+        return updated_user

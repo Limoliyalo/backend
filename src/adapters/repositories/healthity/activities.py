@@ -111,6 +111,22 @@ class SQLAlchemyDailyActivitiesRepository(
         models = await self.list(filters={"character_id": character_id, "date": day})
         return [self._to_domain(model) for model in models]
 
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
+    ) -> list[DailyActivity]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(DailyActivityModel)
+                .where(
+                    DailyActivityModel.character_id == character_id,
+                    DailyActivityModel.date >= start_date,
+                    DailyActivityModel.date <= end_date,
+                )
+                .order_by(DailyActivityModel.date.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
     async def upsert(self, activity: DailyActivity) -> DailyActivity:
         async with self._uow() as uow:
             model = await uow.session.get(DailyActivityModel, activity.id)
@@ -197,6 +213,22 @@ class SQLAlchemyDailyProgressRepository(
         if model is None:
             return None
         return self._to_domain(model)
+
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
+    ) -> list[DailyProgress]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(DailyProgressModel)
+                .where(
+                    DailyProgressModel.character_id == character_id,
+                    DailyProgressModel.date >= start_date,
+                    DailyProgressModel.date <= end_date,
+                )
+                .order_by(DailyProgressModel.date.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
 
     async def upsert(self, progress: DailyProgress) -> DailyProgress:
         async with self._uow() as uow:
@@ -305,6 +337,22 @@ class SQLAlchemyMoodHistoryRepository(
                 .where(MoodHistoryModel.character_id == character_id)
                 .order_by(MoodHistoryModel.timestamp.desc())
                 .limit(limit)
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def list_for_date_range(
+        self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
+    ) -> list[MoodHistory]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(MoodHistoryModel)
+                .where(
+                    MoodHistoryModel.character_id == character_id,
+                    MoodHistoryModel.timestamp >= start_date,
+                    MoodHistoryModel.timestamp <= end_date,
+                )
+                .order_by(MoodHistoryModel.timestamp.desc())
             )
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]

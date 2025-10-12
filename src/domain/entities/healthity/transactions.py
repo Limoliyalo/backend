@@ -1,6 +1,6 @@
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.domain.value_objects.telegram_id import TelegramId
 
@@ -15,4 +15,4 @@ class Transaction:
     related_item_id: uuid.UUID | None = None
     related_background_id: uuid.UUID | None = None
     description: str | None = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

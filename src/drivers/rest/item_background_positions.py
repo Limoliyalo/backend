@@ -47,7 +47,7 @@ async def list_positions_for_item(
 
 
 @router.get(
-    "/admin/{position_id}",
+    "/{position_id}/admin",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -93,7 +93,7 @@ async def create_position(
 
 
 @router.put(
-    "/admin/{position_id}",
+    "/{position_id}/admin",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -120,7 +120,7 @@ async def update_position(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{position_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{position_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_position(
     position_id: UUID,

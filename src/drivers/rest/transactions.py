@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
@@ -5,6 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
@@ -12,6 +15,7 @@ from src.drivers.rest.schemas.transactions import (
     TransactionResponse,
     TransactionUpdate,
 )
+from src.ports.repositories.healthity.transactions import TransactionsRepository
 from src.use_cases.transactions.manage_transactions import (
     CreateTransactionInput,
     CreateTransactionUseCase,
@@ -39,7 +43,7 @@ async def list_transactions(
     return [TransactionResponse.model_validate(t) for t in transactions]
 
 
-@router.get("/admin/{transaction_id}", response_model=TransactionResponse)
+@router.get("/{transaction_id}/admin", response_model=TransactionResponse)
 @inject
 async def get_transaction(
     transaction_id: UUID,
@@ -81,7 +85,7 @@ async def create_transaction(
     return TransactionResponse.model_validate(transaction)
 
 
-@router.patch("/admin/{transaction_id}", response_model=TransactionResponse)
+@router.patch("/{transaction_id}/admin", response_model=TransactionResponse)
 @inject
 async def update_transaction(
     transaction_id: UUID,
@@ -105,7 +109,7 @@ async def update_transaction(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{transaction_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_transaction(
     transaction_id: UUID,
@@ -119,3 +123,46 @@ async def delete_transaction(
         await use_case.execute(transaction_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=list[TransactionResponse])
+@inject
+async def list_my_transactions(
+    start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
+    end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
+    transaction_type: str | None = Query(
+        None,
+        description="Тип транзакции (deposit, withdrawal, purchase_item, purchase_background)",
+    ),
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: ListTransactionsForUserUseCase = Depends(
+        Provide[ApplicationContainer.list_transactions_for_user_use_case]
+    ),
+    transactions_repo: TransactionsRepository = Depends(
+        Provide[ApplicationContainer.transactions_repository]
+    ),
+):
+    """Получить список транзакций текущего пользователя с фильтрацией
+
+    Можно фильтровать по:
+    - Диапазону дат (start_date, end_date)
+    - Типу транзакции (transaction_type)
+    Если фильтры не указаны, возвращаются все транзакции.
+    """
+    from src.domain.value_objects.telegram_id import TelegramId
+
+    telegram_id = int(payload.sub)
+
+    # Фильтрация по датам или типу
+    if start_date and end_date:
+        transactions = await transactions_repo.list_for_user_by_date_range(
+            TelegramId(telegram_id), start_date, end_date
+        )
+    elif transaction_type:
+        transactions = await transactions_repo.list_for_user_by_type(
+            TelegramId(telegram_id), transaction_type
+        )
+    else:
+        transactions = await use_case.execute(telegram_id)
+
+    return [TransactionResponse.model_validate(t) for t in transactions]

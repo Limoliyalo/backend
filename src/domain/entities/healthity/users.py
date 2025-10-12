@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import List
 import uuid
 
@@ -13,8 +13,8 @@ class User:
     is_active: bool = True
     is_admin: bool = False
     balance: int = 0
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def activate(self) -> None:
         if not self.is_active:
@@ -30,8 +30,24 @@ class User:
         self.password_hash = password_hash
         self.touch()
 
+    def deposit(self, amount: int) -> None:
+        """Пополнить баланс пользователя."""
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += amount
+        self.touch()
+
+    def withdraw(self, amount: int) -> None:
+        """Списать средства с баланса пользователя."""
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if self.balance < amount:
+            raise ValueError("Insufficient balance")
+        self.balance -= amount
+        self.touch()
+
     def touch(self) -> None:
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -42,8 +58,8 @@ class UserSettings:
     quiet_end_time: time | None = None
     muted_days: List[str] = field(default_factory=list)
     do_not_disturb: bool = False
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def toggle_do_not_disturb(self, value: bool | None = None) -> None:
         self.do_not_disturb = not self.do_not_disturb if value is None else value
@@ -59,7 +75,7 @@ class UserSettings:
         self.touch()
 
     def touch(self) -> None:
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
 
 @dataclass
@@ -67,4 +83,4 @@ class UserFriend:
     id: uuid.UUID
     owner_tg_id: TelegramId
     friend_tg_id: TelegramId
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

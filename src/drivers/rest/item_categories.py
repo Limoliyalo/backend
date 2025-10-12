@@ -41,7 +41,7 @@ async def list_item_categories(
 
 
 @router.get(
-    "/admin/{category_id}",
+    "/{category_id}/admin",
     response_model=ItemCategoryResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -79,7 +79,7 @@ async def create_item_category(
 
 
 @router.put(
-    "/admin/{category_id}",
+    "/{category_id}/admin",
     response_model=ItemCategoryResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -101,7 +101,7 @@ async def update_item_category(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{category_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_item_category(
     category_id: UUID,
@@ -115,3 +115,15 @@ async def delete_item_category(
         await use_case.execute(category_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/catalog", response_model=list[ItemCategoryResponse])
+@inject
+async def list_item_categories_catalog(
+    use_case: ListItemCategoriesUseCase = Depends(
+        Provide[ApplicationContainer.list_item_categories_use_case]
+    ),
+):
+    """Получить каталог категорий предметов (открытый endpoint)"""
+    categories = await use_case.execute()
+    return [ItemCategoryResponse.model_validate(cat) for cat in categories]

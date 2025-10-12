@@ -2,7 +2,10 @@ from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, status
+
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
 from src.adapters.repositories.exceptions import RepositoryError
 from src.container import ApplicationContainer
 from src.domain.exceptions import EntityNotFoundException
@@ -26,7 +29,7 @@ router = APIRouter(prefix="/user-friends", tags=["User Friends"])
 
 
 @router.get(
-    "/admin/{owner_tg_id}",
+    "/{owner_tg_id}/admin",
     response_model=list[UserFriendResponse],
     status_code=status.HTTP_200_OK,
 )
@@ -74,7 +77,7 @@ async def get_user_friend(
 
 
 @router.post(
-    "/admin/{owner_tg_id}",
+    "/{owner_tg_id}/admin",
     response_model=UserFriendResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -130,7 +133,7 @@ async def update_user_friend(
 
 
 @router.delete(
-    "/admin/{owner_tg_id}/friends/{friend_tg_id}",
+    "/{owner_tg_id}/friends/{friend_tg_id}/admin",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 @inject
@@ -145,5 +148,72 @@ async def remove_friend(
     """Удалить друга (требуется админ-доступ)"""
     try:
         await use_case.execute(owner_tg_id, friend_tg_id)
+    except RepositoryError as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=list[UserFriendResponse])
+@inject
+async def list_my_friends(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: ListUserFriendsUseCase = Depends(
+        Provide[ApplicationContainer.list_user_friends_use_case]
+    ),
+):
+    """Получить список своих друзей"""
+    telegram_id = int(payload.sub)
+    friends = await use_case.execute(telegram_id)
+    return [
+        UserFriendResponse(
+            id=friend.id,
+            owner_tg_id=friend.owner_tg_id.value,
+            friend_tg_id=friend.friend_tg_id.value,
+            created_at=friend.created_at,
+        )
+        for friend in friends
+    ]
+
+
+@router.post(
+    "/me", response_model=UserFriendResponse, status_code=status.HTTP_201_CREATED
+)
+@inject
+async def add_my_friend(
+    data: UserFriendCreate,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: AddFriendUseCase = Depends(
+        Provide[ApplicationContainer.add_friend_use_case]
+    ),
+):
+    """Добавить друга"""
+    telegram_id = int(payload.sub)
+    try:
+        input_data = AddFriendInput(
+            owner_tg_id=telegram_id, friend_tg_id=data.friend_tg_id
+        )
+        friend = await use_case.execute(input_data)
+        return UserFriendResponse(
+            id=friend.id,
+            owner_tg_id=friend.owner_tg_id.value,
+            friend_tg_id=friend.friend_tg_id.value,
+            created_at=friend.created_at,
+        )
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
+
+
+@router.delete("/me/{friend_tg_id}", status_code=status.HTTP_204_NO_CONTENT)
+@inject
+async def remove_my_friend(
+    friend_tg_id: int,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: RemoveFriendUseCase = Depends(
+        Provide[ApplicationContainer.remove_friend_use_case]
+    ),
+):
+    """Удалить друга из своего списка"""
+    telegram_id = int(payload.sub)
+    try:
+        await use_case.execute(telegram_id, friend_tg_id)
     except RepositoryError as e:
         raise NotFoundException(detail=str(e))

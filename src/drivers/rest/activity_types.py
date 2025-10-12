@@ -41,7 +41,7 @@ async def list_activity_types(
 
 
 @router.get(
-    "/admin/{activity_type_id}",
+    "/{activity_type_id}/admin",
     response_model=ActivityTypeResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -84,7 +84,7 @@ async def create_activity_type(
 
 
 @router.patch(
-    "/admin/{activity_type_id}",
+    "/{activity_type_id}/admin",
     response_model=ActivityTypeResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -112,7 +112,7 @@ async def update_activity_type(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{activity_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{activity_type_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_activity_type(
     activity_type_id: UUID,
@@ -126,3 +126,15 @@ async def delete_activity_type(
         await use_case.execute(activity_type_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.get("/catalog", response_model=list[ActivityTypeResponse])
+@inject
+async def list_activity_types_catalog(
+    use_case: ListActivityTypesUseCase = Depends(
+        Provide[ApplicationContainer.list_activity_types_use_case]
+    ),
+):
+    """Получить каталог типов активностей (открытый endpoint)"""
+    activity_types = await use_case.execute()
+    return [ActivityTypeResponse.model_validate(at) for at in activity_types]

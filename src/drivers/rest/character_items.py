@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.character_items import (
@@ -13,14 +15,21 @@ from src.drivers.rest.schemas.character_items import (
     CharacterItemUpdate,
 )
 from src.use_cases.character_items.manage_character_items import (
+    EquipItemUseCase,
     GetCharacterItemUseCase,
     ListCharacterItemsUseCase,
     PurchaseItemInput,
     PurchaseItemUseCase,
+    PurchaseItemWithBalanceInput,
+    PurchaseItemWithBalanceUseCase,
     RemoveCharacterItemUseCase,
+    ToggleFavouriteItemUseCase,
+    UnequipItemUseCase,
     UpdateCharacterItemInput,
     UpdateCharacterItemUseCase,
 )
+from src.use_cases.characters.get_character import GetCharacterByUserUseCase
+from src.drivers.rest.exceptions import BadRequestException
 
 router = APIRouter(prefix="/character-items", tags=["Character Items"])
 
@@ -39,7 +48,7 @@ async def list_character_items(
     return [CharacterItemResponse.model_validate(item) for item in items]
 
 
-@router.get("/admin/{character_item_id}", response_model=CharacterItemResponse)
+@router.get("/{character_item_id}/admin", response_model=CharacterItemResponse)
 @inject
 async def get_character_item(
     character_item_id: UUID,
@@ -77,7 +86,7 @@ async def create_character_item(
     return CharacterItemResponse.model_validate(item)
 
 
-@router.patch("/admin/{character_item_id}", response_model=CharacterItemResponse)
+@router.patch("/{character_item_id}/admin", response_model=CharacterItemResponse)
 @inject
 async def update_character_item(
     character_item_id: UUID,
@@ -99,7 +108,7 @@ async def update_character_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{character_item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{character_item_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_character_item(
     character_item_id: UUID,
@@ -113,3 +122,148 @@ async def delete_character_item(
         await use_case.execute(character_item_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+
+
+@router.patch("/{character_item_id}/equip", response_model=CharacterItemResponse)
+@inject
+async def equip_my_item(
+    character_item_id: UUID,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    get_item_use_case: GetCharacterItemUseCase = Depends(
+        Provide[ApplicationContainer.get_character_item_use_case]
+    ),
+    use_case: EquipItemUseCase = Depends(
+        Provide[ApplicationContainer.equip_item_use_case]
+    ),
+):
+    """Активировать предмет"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await get_character_use_case.execute(telegram_id)
+        item = await get_item_use_case.execute(character_item_id)
+
+        if item.character_id != character.id:
+            raise NotFoundException(detail="Item does not belong to your character")
+
+        updated_item = await use_case.execute(character_item_id)
+        return CharacterItemResponse.model_validate(updated_item)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.patch("/{character_item_id}/unequip", response_model=CharacterItemResponse)
+@inject
+async def unequip_my_item(
+    character_item_id: UUID,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    get_item_use_case: GetCharacterItemUseCase = Depends(
+        Provide[ApplicationContainer.get_character_item_use_case]
+    ),
+    use_case: UnequipItemUseCase = Depends(
+        Provide[ApplicationContainer.unequip_item_use_case]
+    ),
+):
+    """Деактивировать предмет"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await get_character_use_case.execute(telegram_id)
+        item = await get_item_use_case.execute(character_item_id)
+
+        if item.character_id != character.id:
+            raise NotFoundException(detail="Item does not belong to your character")
+
+        updated_item = await use_case.execute(character_item_id)
+        return CharacterItemResponse.model_validate(updated_item)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.patch("/{character_item_id}/favourite", response_model=CharacterItemResponse)
+@inject
+async def toggle_favourite_item(
+    character_item_id: UUID,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    get_item_use_case: GetCharacterItemUseCase = Depends(
+        Provide[ApplicationContainer.get_character_item_use_case]
+    ),
+    use_case: ToggleFavouriteItemUseCase = Depends(
+        Provide[ApplicationContainer.toggle_favourite_item_use_case]
+    ),
+):
+    """Добавить/убрать предмет из избранного"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await get_character_use_case.execute(telegram_id)
+        item = await get_item_use_case.execute(character_item_id)
+
+        if item.character_id != character.id:
+            raise NotFoundException(detail="Item does not belong to your character")
+
+        updated_item = await use_case.execute(character_item_id)
+        return CharacterItemResponse.model_validate(updated_item)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=list[CharacterItemResponse])
+@inject
+async def list_my_items(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    use_case: ListCharacterItemsUseCase = Depends(
+        Provide[ApplicationContainer.list_character_items_use_case]
+    ),
+):
+    """Получить список купленных предметов текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await get_character_use_case.execute(telegram_id)
+        items = await use_case.execute(character.id)
+        return [CharacterItemResponse.model_validate(item) for item in items]
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.post(
+    "/purchase",
+    response_model=CharacterItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@inject
+async def purchase_item(
+    item_id: UUID = Query(..., description="ID предмета для покупки"),
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    use_case: PurchaseItemWithBalanceUseCase = Depends(
+        Provide[ApplicationContainer.purchase_item_with_balance_use_case]
+    ),
+):
+    """Купить предмет (списываются монетки с баланса)"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await get_character_use_case.execute(telegram_id)
+
+        input_data = PurchaseItemWithBalanceInput(
+            user_tg_id=telegram_id,
+            character_id=character.id,
+            item_id=item_id,
+        )
+        purchased_item = await use_case.execute(input_data)
+        return CharacterItemResponse.model_validate(purchased_item)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))

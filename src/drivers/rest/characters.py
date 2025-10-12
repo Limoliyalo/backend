@@ -5,12 +5,16 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.characters import (
     CharacterCreate,
     CharacterResponse,
     CharacterUpdate,
+    CharacterUserCreate,
+    CharacterUserUpdate,
 )
 from src.use_cases.characters.create_character import (
     CreateCharacterInput,
@@ -19,6 +23,7 @@ from src.use_cases.characters.create_character import (
 from src.use_cases.characters.delete_character import DeleteCharacterUseCase
 from src.use_cases.characters.get_character import (
     GetCharacterByIdUseCase,
+    GetCharacterByUserUseCase,
     ListCharactersUseCase,
 )
 from src.use_cases.characters.update_character import (
@@ -44,7 +49,7 @@ async def list_characters(
     return [CharacterResponse.model_validate(char) for char in characters]
 
 
-@router.get("/admin/{character_id}", response_model=CharacterResponse)
+@router.get("/{character_id}/admin", response_model=CharacterResponse)
 @inject
 async def get_character(
     character_id: UUID,
@@ -85,7 +90,7 @@ async def create_character(
     return CharacterResponse.model_validate(character)
 
 
-@router.patch("/admin/{character_id}", response_model=CharacterResponse)
+@router.patch("/{character_id}/admin", response_model=CharacterResponse)
 @inject
 async def update_character(
     character_id: UUID,
@@ -109,7 +114,7 @@ async def update_character(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/admin/{character_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{character_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_character(
     character_id: UUID,
@@ -121,5 +126,101 @@ async def delete_character(
     """Удалить персонажа (требуется админ-доступ)"""
     try:
         await use_case.execute(character_id)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get("/me", response_model=CharacterResponse)
+@inject
+async def get_my_character(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+):
+    """Получить персонажа текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        character = await use_case.execute(telegram_id)
+        return CharacterResponse.model_validate(character)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.post(
+    "/me", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED
+)
+@inject
+async def create_my_character(
+    data: CharacterUserCreate,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    use_case: CreateCharacterUseCase = Depends(
+        Provide[ApplicationContainer.create_character_use_case]
+    ),
+):
+    """Создать персонажа для текущего пользователя (только name и sex)"""
+    telegram_id = int(payload.sub)
+    input_data = CreateCharacterInput(
+        user_tg_id=telegram_id,
+        name=data.name,
+        sex=data.sex,
+        current_mood="neutral",  # Устанавливается сервером
+        level=1,  # Устанавливается сервером
+        total_experience=0,  # Устанавливается сервером
+    )
+    character = await use_case.execute(input_data)
+    return CharacterResponse.model_validate(character)
+
+
+@router.patch("/me", response_model=CharacterResponse)
+@inject
+async def update_my_character(
+    data: CharacterUserUpdate,
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    update_use_case: UpdateCharacterUseCase = Depends(
+        Provide[ApplicationContainer.update_character_use_case]
+    ),
+):
+    """Обновить персонажа текущего пользователя (только name и sex)"""
+    telegram_id = int(payload.sub)
+    try:
+        # Получить персонажа пользователя
+        character = await get_character_use_case.execute(telegram_id)
+
+        # Обновить только безопасные поля
+        input_data = UpdateCharacterInput(
+            character_id=character.id,
+            name=data.name,
+            sex=data.sex,
+            current_mood=None,  # Не обновляется пользователем
+        )
+        updated_character = await update_use_case.execute(input_data)
+        return CharacterResponse.model_validate(updated_character)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+@inject
+async def delete_my_character(
+    payload: TokenPayload = Depends(get_access_token_payload),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+    delete_use_case: DeleteCharacterUseCase = Depends(
+        Provide[ApplicationContainer.delete_character_use_case]
+    ),
+):
+    """Удалить персонажа текущего пользователя"""
+    telegram_id = int(payload.sub)
+    try:
+        # Получить персонажа пользователя
+        character = await get_character_use_case.execute(telegram_id)
+
+        # Удалить персонажа
+        await delete_use_case.execute(character.id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
