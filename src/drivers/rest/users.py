@@ -15,6 +15,7 @@ from src.drivers.rest.schemas.users import (
     ChangePasswordRequest,
     DepositRequest,
     UserCreate,
+    UserRegister,
     UserResponse,
     UserStatisticsResponse,
     UserUpdate,
@@ -46,6 +47,52 @@ from src.use_cases.users.manage_users import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@inject
+async def register_user(
+    data: UserRegister,
+    use_case: CreateUserUseCase = Depends(
+        Provide[ApplicationContainer.create_user_use_case]
+    ),
+):
+    """Публичная регистрация пользователя (только telegram_id и пароль)"""
+    logger.info(
+        {
+            "action": "register_user",
+            "stage": "start",
+            "data": {"telegram_id": data.telegram_id},
+        }
+    )
+
+    try:
+        input_data = CreateUserInput(
+            telegram_id=data.telegram_id,
+            password=data.password,
+            is_active=True,
+            balance=0,
+        )
+        user = await use_case.execute(input_data)
+        response = UserResponse.model_validate(user)
+
+        logger.info(
+            {
+                "action": "register_user",
+                "stage": "end",
+                "data": {"telegram_id": data.telegram_id, "success": True},
+            }
+        )
+        return response
+    except ValueError as e:
+        logger.error(
+            {
+                "action": "register_user",
+                "stage": "error",
+                "data": {"telegram_id": data.telegram_id, "error": str(e)},
+            }
+        )
+        raise BadRequestException(detail=str(e))
 
 
 @router.get("/admin", response_model=list[UserResponse], status_code=status.HTTP_200_OK)

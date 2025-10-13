@@ -19,6 +19,12 @@ class UserCreate(UserBase):
     )
 
 
+class UserRegister(BaseModel):
+    """Публичная регистрация - только telegram_id и пароль"""
+    telegram_id: int = Field(..., description="Telegram ID пользователя")
+    password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
+
+
 class UserUpdate(BaseModel):
     password: str | None = Field(
         None, description="Новый пароль (будет автоматически захэширован)"
