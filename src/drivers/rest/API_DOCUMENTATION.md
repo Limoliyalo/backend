@@ -34,7 +34,7 @@
 
 ### Получить JWT токен
 ```http
-POST /auth/token
+POST /auth/login
 Content-Type: application/json
 
 {
@@ -61,6 +61,18 @@ Content-Type: application/json
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
+
+### Выйти из профиля(+почистить токен)
+```http
+POST /auth/logout
+Content-Type: application/json
+
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+}
+```
+
 
 ### Protected Endpoint (пример использования токена)
 ```http
