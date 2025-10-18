@@ -38,6 +38,10 @@ class CharactersRepository(ABC):
 
 class CharacterItemsRepository(ABC):
     @abstractmethod
+    async def get_by_id(self, character_item_id: uuid.UUID) -> CharacterItem | None:
+        raise NotImplementedError
+
+    @abstractmethod
     async def list_for_character(self, character_id: uuid.UUID) -> list[CharacterItem]:
         raise NotImplementedError
 
@@ -49,8 +53,18 @@ class CharacterItemsRepository(ABC):
     async def update(self, character_item: CharacterItem) -> CharacterItem:
         raise NotImplementedError
 
+    @abstractmethod
+    async def remove(self, character_item_id: uuid.UUID) -> None:
+        raise NotImplementedError
+
 
 class CharacterBackgroundsRepository(ABC):
+    @abstractmethod
+    async def get_by_id(
+        self, character_background_id: uuid.UUID
+    ) -> CharacterBackground | None:
+        raise NotImplementedError
+
     @abstractmethod
     async def list_for_character(
         self, character_id: uuid.UUID
@@ -67,6 +81,10 @@ class CharacterBackgroundsRepository(ABC):
     async def update(
         self, character_background: CharacterBackground
     ) -> CharacterBackground:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def remove(self, character_background_id: uuid.UUID) -> None:
         raise NotImplementedError
 
 

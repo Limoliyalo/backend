@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
@@ -8,7 +9,12 @@ from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import (
+    RepositoryError,
+    IntegrityConstraintError,
+    DuplicateEntityError,
+)
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.characters import (
     CharacterCreate,
     CharacterResponse,
@@ -31,6 +37,7 @@ from src.use_cases.characters.update_character import (
     UpdateCharacterUseCase,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/characters", tags=["Characters"])
 
 
@@ -78,16 +85,26 @@ async def create_character(
     ),
 ):
     """Создать нового персонажа (требуется админ-доступ)"""
-    input_data = CreateCharacterInput(
-        user_tg_id=data.user_tg_id,
-        name=data.name,
-        sex=data.sex,
-        current_mood=data.current_mood,
-        level=data.level,
-        total_experience=data.total_experience,
-    )
-    character = await use_case.execute(input_data)
-    return CharacterResponse.model_validate(character)
+    try:
+        input_data = CreateCharacterInput(
+            user_tg_id=data.user_tg_id,
+            name=data.name,
+            sex=data.sex,
+            current_mood=data.current_mood,
+            level=data.level,
+            total_experience=data.total_experience,
+        )
+        character = await use_case.execute(input_data)
+        return CharacterResponse.model_validate(character)
+    except DuplicateEntityError as e:
+        logger.error(f"DuplicateEntityError in create_character: {e}")
+        raise BadRequestException(detail="Character already exists for this user")
+    except IntegrityConstraintError as e:
+        logger.error(f"IntegrityConstraintError in create_character: {e}")
+        raise BadRequestException(detail="Integrity constraint violated")
+    except RepositoryError as e:
+        logger.error(f"RepositoryError in create_character: {e}")
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/{character_id}/admin", response_model=CharacterResponse)
@@ -160,16 +177,23 @@ async def create_my_character(
 ):
     """Создать персонажа для текущего пользователя (только name и sex)"""
     telegram_id = int(payload.sub)
-    input_data = CreateCharacterInput(
-        user_tg_id=telegram_id,
-        name=data.name,
-        sex=data.sex,
-        current_mood="neutral",  # Устанавливается сервером
-        level=1,  # Устанавливается сервером
-        total_experience=0,  # Устанавливается сервером
-    )
-    character = await use_case.execute(input_data)
-    return CharacterResponse.model_validate(character)
+    try:
+        input_data = CreateCharacterInput(
+            user_tg_id=telegram_id,
+            name=data.name,
+            sex=data.sex,
+            current_mood="neutral",
+            level=1,
+            total_experience=0,
+        )
+        character = await use_case.execute(input_data)
+        return CharacterResponse.model_validate(character)
+    except DuplicateEntityError:
+        raise BadRequestException(detail="Character already exists for this user")
+    except IntegrityConstraintError:
+        raise BadRequestException(detail="Integrity constraint violated")
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/me", response_model=CharacterResponse)
@@ -187,15 +211,14 @@ async def update_my_character(
     """Обновить персонажа текущего пользователя (только name и sex)"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Обновить только безопасные поля
         input_data = UpdateCharacterInput(
             character_id=character.id,
             name=data.name,
             sex=data.sex,
-            current_mood=None,  # Не обновляется пользователем
+            current_mood=None,
         )
         updated_character = await update_use_case.execute(input_data)
         return CharacterResponse.model_validate(updated_character)
@@ -217,10 +240,9 @@ async def delete_my_character(
     """Удалить персонажа текущего пользователя"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Удалить персонажа
         await delete_use_case.execute(character.id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))

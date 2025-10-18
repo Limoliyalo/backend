@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends, status
 from src.container import ApplicationContainer
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
-from src.drivers.rest.exceptions import UnauthorizedException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import UnauthorizedException, BadRequestException
 from src.drivers.rest.schemas.auth import (
     AuthTokensResponse,
     LoginRequest,
@@ -63,6 +64,9 @@ def _handle_auth_error(exc: Exception) -> None:
     if isinstance(exc, unauthorized_errors):
         raise UnauthorizedException(detail=str(exc)) from exc
 
+    if isinstance(exc, RepositoryError):
+        raise BadRequestException(detail=str(exc)) from exc
+
     raise exc
 
 
@@ -87,7 +91,7 @@ async def login(
             LoginInput(user_tg_id=payload.user_tg_id, password=payload.password)
         )
         return _map_tokens(tokens)
-    except Exception as exc:  # pragma: no cover - safety net
+    except Exception as exc:
         logger.warning(
             {
                 "action": "auth.login",
@@ -111,7 +115,7 @@ async def refresh(
             RefreshInput(refresh_token=payload.refresh_token)
         )
         return _map_tokens(tokens)
-    except Exception as exc:  # pragma: no cover - safety net
+    except Exception as exc:
         _handle_auth_error(exc)
 
 
@@ -129,7 +133,7 @@ async def logout(
                 revoke_all=payload.revoke_all,
             )
         )
-    except Exception as exc:  # pragma: no cover - safety net
+    except Exception as exc:
         _handle_auth_error(exc)
 
 

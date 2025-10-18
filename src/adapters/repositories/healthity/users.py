@@ -15,7 +15,7 @@ from src.ports.repositories.healthity.users import (
     UserFriendsRepository,
     UserSettingsRepository,
 )
-from src.ports.repositories.users import UsersRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 class SQLAlchemyUserSettingsRepository(
@@ -247,7 +247,6 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             model.password_hash = user.password_hash
             model.is_active = user.is_active
             model.balance = user.balance
-            # is_admin не обновляется через обычный update - только из БД напрямую
 
             await uow.session.flush()
             await uow.session.refresh(model)

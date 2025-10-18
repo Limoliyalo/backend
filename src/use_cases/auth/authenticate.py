@@ -23,8 +23,7 @@ from src.ports.repositories.auth import (
     BlacklistedTokensRepository,
     RefreshTokensRepository,
 )
-from src.ports.repositories.users import UsersRepository
-
+from src.ports.repositories.healthity.users import UsersRepository
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ class _TokenFactory:
             )
         )
 
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         access_expires_in = max(int((access_exp - now).total_seconds()), 0)
         refresh_expires_in = max(int((refresh_exp - now).total_seconds()), 0)
 
@@ -170,7 +169,7 @@ class _RefreshTokenManager:
         if token.revoked:
             raise RefreshTokenRevokedException(str(payload.jti))
 
-        if token.expires_at < datetime.now(tz=timezone.utc):
+        if token.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             raise TokenExpiredException()
 
         if not self._token_hasher.verify(refresh_token, token.token_hash):
@@ -315,7 +314,6 @@ class LogoutUseCase:
         else:
             await self._token_manager.revoke(token)
 
-        # Blacklist the access token if provided
         if data.access_token:
             try:
                 payload = self._jwt_service.decode(
@@ -327,7 +325,7 @@ class LogoutUseCase:
                     jti=payload.jti,
                     user_tg_id=user_id,
                     reason="logout" if not data.revoke_all else "revoke_all",
-                    blacklisted_at=datetime.now(tz=timezone.utc),
+                    blacklisted_at=datetime.now(timezone.utc).replace(tzinfo=None),
                     expires_at=payload.expires_at,
                 )
                 await self._blacklisted_tokens_repository.add(blacklisted)
@@ -342,7 +340,7 @@ class LogoutUseCase:
                     }
                 )
             except (InvalidTokenException, TokenExpiredException) as exc:
-                # If access token is invalid or expired, just log and continue
+
                 logger.warning(
                     {
                         "action": "LogoutUseCase.execute",

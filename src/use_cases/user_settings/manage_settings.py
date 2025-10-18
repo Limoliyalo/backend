@@ -55,7 +55,7 @@ class UpsertUserSettingsUseCase:
         )
 
         if settings is None:
-            # Create new settings
+
             settings = UserSettings(
                 id=uuid.uuid4(),
                 user_tg_id=TelegramId(data.user_tg_id),
@@ -65,7 +65,7 @@ class UpsertUserSettingsUseCase:
                 do_not_disturb=data.do_not_disturb or False,
             )
         else:
-            # Update existing
+
             if data.quiet_start_time is not None:
                 settings.quiet_start_time = data.quiet_start_time
             if data.quiet_end_time is not None:

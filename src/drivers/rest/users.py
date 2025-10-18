@@ -9,6 +9,7 @@ from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
 from src.domain.value_objects.telegram_id import TelegramId
+from src.adapters.repositories.exceptions import RepositoryError, DuplicateEntityError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.users import (
     BalanceResponse,
@@ -49,7 +50,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 @inject
 async def register_user(
     data: UserRegister,
@@ -84,6 +87,27 @@ async def register_user(
             }
         )
         return response
+    except DuplicateEntityError:
+        logger.error(
+            {
+                "action": "register_user",
+                "stage": "error",
+                "data": {
+                    "telegram_id": data.telegram_id,
+                    "error": "User already exists",
+                },
+            }
+        )
+        raise BadRequestException(detail="User already exists")
+    except RepositoryError as e:
+        logger.error(
+            {
+                "action": "register_user",
+                "stage": "error",
+                "data": {"telegram_id": data.telegram_id, "error": str(e)},
+            }
+        )
+        raise BadRequestException(detail=str(e))
     except ValueError as e:
         logger.error(
             {
@@ -187,6 +211,15 @@ async def create_user(
             }
         )
         return response
+    except RepositoryError as e:
+        logger.error(
+            {
+                "action": "create_user",
+                "stage": "error",
+                "data": {"telegram_id": data.telegram_id, "error": str(e)},
+            }
+        )
+        raise BadRequestException(detail=str(e))
     except ValueError as e:
         logger.error(
             {
@@ -375,10 +408,9 @@ async def get_my_statistics(
 
     telegram_id = int(payload.sub)
     try:
-        # Получить пользователя
+
         user = await get_user_use_case.execute(telegram_id)
 
-        # Попытаться получить персонажа
         try:
             character = await get_character_use_case.execute(telegram_id)
             character_name = character.name
@@ -393,7 +425,6 @@ async def get_my_statistics(
             total_experience = None
             character_id = None
 
-        # Подсчитать количество
         if character_id:
             purchased_items = await items_repo.list_for_character(character_id)
             purchased_backgrounds = await backgrounds_repo.list_for_character(
@@ -408,8 +439,6 @@ async def get_my_statistics(
         transactions = await transactions_repo.list_for_user(TelegramId(telegram_id))
         friends = await friends_repo.list_for_user(telegram_id)
 
-        # Подсчитать активности (упрощенно - через транзакции или другой метод)
-        # Для демонстрации считаем все записи настроения как активности
         activities_count = len(mood_entries)
 
         return UserStatisticsResponse(

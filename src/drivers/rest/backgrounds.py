@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.catalog import (
     BackgroundCreate,
     BackgroundResponse,
@@ -37,8 +38,11 @@ async def list_backgrounds(
     ),
 ):
     """Получить список всех фонов (требуется админ-доступ)"""
-    backgrounds = await use_case.execute(limit=limit, offset=offset)
-    return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
+    try:
+        backgrounds = await use_case.execute(limit=limit, offset=offset)
+        return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get("/{background_id}/admin", response_model=BackgroundResponse)
@@ -54,6 +58,8 @@ async def get_background(
     try:
         background = await use_case.execute(background_id)
         return BackgroundResponse.model_validate(background)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -78,8 +84,11 @@ async def create_background(
         required_level=data.required_level,
         is_available=data.is_available,
     )
-    background = await use_case.execute(input_data)
-    return BackgroundResponse.model_validate(background)
+    try:
+        background = await use_case.execute(input_data)
+        return BackgroundResponse.model_validate(background)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/{background_id}/admin", response_model=BackgroundResponse)
@@ -105,6 +114,8 @@ async def update_background(
         )
         background = await use_case.execute(input_data)
         return BackgroundResponse.model_validate(background)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -121,6 +132,8 @@ async def delete_background(
     """Удалить фон (требуется админ-доступ)"""
     try:
         await use_case.execute(background_id)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -133,5 +146,8 @@ async def list_backgrounds_catalog(
     ),
 ):
     """Получить каталог доступных фонов (открытый endpoint)"""
-    backgrounds = await use_case.execute()
-    return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
+    try:
+        backgrounds = await use_case.execute()
+        return [BackgroundResponse.model_validate(bg) for bg in backgrounds]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))

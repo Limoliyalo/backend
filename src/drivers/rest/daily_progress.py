@@ -9,7 +9,8 @@ from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.activities import (
     DailyProgressCreate,
     DailyProgressResponse,
@@ -24,6 +25,7 @@ from src.use_cases.daily_progress.manage_daily_progress import (
     GetDailyProgressForDayUseCase,
     GetDailyProgressUseCase,
     ListDailyProgressForCharacterUseCase,
+    ListDailyProgressForDateRangeUseCase,
     UpdateDailyProgressInput,
     UpdateDailyProgressUseCase,
 )
@@ -45,8 +47,11 @@ async def list_daily_progress_for_character(
     ),
 ):
     """Получить весь прогресс персонажа (требуется админ-доступ)"""
-    progress_list = await use_case.execute(character_id)
-    return [DailyProgressResponse.model_validate(p) for p in progress_list]
+    try:
+        progress_list = await use_case.execute(character_id)
+        return [DailyProgressResponse.model_validate(p) for p in progress_list]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get(
@@ -67,6 +72,29 @@ async def get_daily_progress_for_day(
     try:
         progress = await use_case.execute(character_id, day)
         return DailyProgressResponse.model_validate(progress)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get(
+    "/character/{character_id}/date-range",
+    response_model=list[DailyProgressResponse],
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def get_daily_progress_for_date_range(
+    character_id: UUID,
+    start_date: datetime = Query(..., description="Начальная дата диапазона"),
+    end_date: datetime = Query(..., description="Конечная дата диапазона"),
+    _: int = Depends(admin_user_provider),
+    use_case: ListDailyProgressForDateRangeUseCase = Depends(
+        Provide[ApplicationContainer.list_daily_progress_for_date_range_use_case]
+    ),
+):
+    """Получить прогресс персонажа за диапазон дат (требуется админ-доступ)"""
+    try:
+        progress_list = await use_case.execute(character_id, start_date, end_date)
+        return [DailyProgressResponse.model_validate(p) for p in progress_list]
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -104,7 +132,6 @@ async def create_daily_progress(
         character_id=data.character_id,
         date=data.date,
         experience_gained=data.experience_gained,
-        level_at_end=data.level_at_end,
         mood_average=data.mood_average,
         behavior_index=data.behavior_index,
     )
@@ -127,7 +154,6 @@ async def update_daily_progress(
         input_data = UpdateDailyProgressInput(
             progress_id=progress_id,
             experience_gained=data.experience_gained,
-            level_at_end=data.level_at_end,
             mood_average=data.mood_average,
             behavior_index=data.behavior_index,
         )
@@ -180,7 +206,6 @@ async def list_my_daily_progress(
     try:
         character = await get_character_use_case.execute(telegram_id)
 
-        # Фильтрация по диапазону дат или limit
         if start_date and end_date:
             progress_list = await progress_repo.list_for_date_range(
                 character.id, start_date, end_date

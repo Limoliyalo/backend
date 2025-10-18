@@ -34,10 +34,8 @@ class PasswordHasher:
             }
         )
 
-        # Предварительное хеширование для обхода ограничения bcrypt
         prehashed = self._prehash_password(password)
 
-        # Основное хеширование через bcrypt
         salt = bcrypt.gensalt()
         hashed = bcrypt.hashpw(prehashed, salt)
 

@@ -9,6 +9,7 @@ from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
     DailyActivityCreate,
@@ -48,6 +49,8 @@ async def list_daily_activities_for_day(
     try:
         activities = await use_case.execute(character_id, day)
         return [DailyActivityResponse.model_validate(a) for a in activities]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -65,6 +68,8 @@ async def get_daily_activity(
     try:
         activity = await use_case.execute(activity_id)
         return DailyActivityResponse.model_validate(activity)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -89,8 +94,11 @@ async def create_daily_activity(
         goal=data.goal,
         notes=data.notes,
     )
-    activity = await use_case.execute(input_data)
-    return DailyActivityResponse.model_validate(activity)
+    try:
+        activity = await use_case.execute(input_data)
+        return DailyActivityResponse.model_validate(activity)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/{activity_id}/admin", response_model=DailyActivityResponse)
@@ -113,6 +121,8 @@ async def update_daily_activity(
         )
         activity = await use_case.execute(input_data)
         return DailyActivityResponse.model_validate(activity)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -129,6 +139,8 @@ async def delete_daily_activity(
     """Удалить дневную активность (требуется админ-доступ)"""
     try:
         await use_case.execute(activity_id)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -156,10 +168,9 @@ async def list_my_daily_activities(
     """Получить активности текущего пользователя за день или диапазон дат"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Фильтрация по диапазону дат или по дню
         if start_date and end_date:
             activities = await activities_repo.list_for_date_range(
                 character.id, start_date, end_date
@@ -197,10 +208,9 @@ async def create_my_daily_activity(
     """Создать активность для текущего пользователя"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Создать активность
         input_data = CreateDailyActivityInput(
             character_id=character.id,
             activity_type_id=activity_type_id,
@@ -236,15 +246,13 @@ async def update_my_daily_activity(
     """Обновить активность текущего пользователя"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Получить активность и проверить владельца
         activity = await get_activity_use_case.execute(activity_id)
         if activity.character_id != character.id:
             raise BadRequestException(detail="You can only update your own activities")
 
-        # Обновить активность
         input_data = UpdateDailyActivityInput(
             activity_id=activity_id,
             value=data.value,

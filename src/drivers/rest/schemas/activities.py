@@ -1,14 +1,15 @@
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-# Activity Type Schemas
 class ActivityTypeBase(BaseModel):
-    name: str
-    unit: str
-    color: str | None = None
-    daily_goal_default: int
+    name: str = Field(
+        ..., min_length=1, max_length=100, description="Activity type name"
+    )
+    unit: str = Field(..., min_length=1, max_length=50, description="Activity unit")
+    color: str | None = Field(None, max_length=7, description="Color in hex format")
+    daily_goal_default: int = Field(ge=1, description="Daily goal must be at least 1")
 
 
 class ActivityTypeCreate(ActivityTypeBase):
@@ -16,10 +17,16 @@ class ActivityTypeCreate(ActivityTypeBase):
 
 
 class ActivityTypeUpdate(BaseModel):
-    name: str | None = None
-    unit: str | None = None
-    color: str | None = None
-    daily_goal_default: int | None = None
+    name: str | None = Field(
+        None, min_length=1, max_length=100, description="Activity type name"
+    )
+    unit: str | None = Field(
+        None, min_length=1, max_length=50, description="Activity unit"
+    )
+    color: str | None = Field(None, max_length=7, description="Color in hex format")
+    daily_goal_default: int | None = Field(
+        None, ge=1, description="Daily goal must be at least 1"
+    )
 
 
 class ActivityTypeResponse(ActivityTypeBase):
@@ -29,12 +36,11 @@ class ActivityTypeResponse(ActivityTypeBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Daily Activity Schemas
 class DailyActivityBase(BaseModel):
     date: datetime
-    value: int = 0
-    goal: int = 1
-    notes: str | None = None
+    value: int = Field(default=0, ge=0, description="Value must be non-negative")
+    goal: int = Field(default=1, ge=1, description="Goal must be at least 1")
+    notes: str | None = Field(None, max_length=255, description="Notes")
 
 
 class DailyActivityCreate(DailyActivityBase):
@@ -43,8 +49,8 @@ class DailyActivityCreate(DailyActivityBase):
 
 
 class DailyActivityUpdate(BaseModel):
-    value: int | None = None
-    goal: int | None = None
+    value: int | None = Field(None, ge=0, description="Value must be non-negative")
+    goal: int | None = Field(None, ge=1, description="Goal must be at least 1")
     notes: str | None = None
 
 
@@ -58,13 +64,24 @@ class DailyActivityResponse(DailyActivityBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Daily Progress Schemas
 class DailyProgressBase(BaseModel):
     date: datetime
-    experience_gained: int = 0
-    level_at_end: int = 1
-    mood_average: str | None = None
-    behavior_index: int | None = None
+    experience_gained: int = Field(
+        default=0, ge=0, description="Experience gained must be non-negative"
+    )
+    mood_average: str | None = Field(None, max_length=50, description="Mood average")
+    behavior_index: int | None = Field(
+        None, ge=0, description="Behavior index must be non-negative"
+    )
+
+    @field_validator("mood_average")
+    @classmethod
+    def validate_mood_average(cls, v: str | None) -> str | None:
+        if v is not None and v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError(
+                "Mood average must be one of: neutral, happy, sad, angry, bored"
+            )
+        return v
 
 
 class DailyProgressCreate(DailyProgressBase):
@@ -72,10 +89,20 @@ class DailyProgressCreate(DailyProgressBase):
 
 
 class DailyProgressUpdate(BaseModel):
-    experience_gained: int | None = None
-    level_at_end: int | None = None
+    experience_gained: int | None = Field(
+        None, ge=0, description="Experience gained must be non-negative"
+    )
     mood_average: str | None = None
     behavior_index: int | None = None
+
+    @field_validator("mood_average")
+    @classmethod
+    def validate_mood_average(cls, v: str | None) -> str | None:
+        if v is not None and v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError(
+                "Mood average must be one of: neutral, happy, sad, angry, bored"
+            )
+        return v
 
 
 class DailyProgressResponse(DailyProgressBase):
@@ -87,10 +114,16 @@ class DailyProgressResponse(DailyProgressBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Mood History Schemas
 class MoodHistoryBase(BaseModel):
     mood: str
     trigger: str | None = None
+
+    @field_validator("mood")
+    @classmethod
+    def validate_mood(cls, v: str) -> str:
+        if v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError("Mood must be one of: neutral, happy, sad, angry, bored")
+        return v
 
 
 class MoodHistoryCreate(MoodHistoryBase):
@@ -100,6 +133,13 @@ class MoodHistoryCreate(MoodHistoryBase):
 class MoodHistoryUpdate(BaseModel):
     mood: str | None = None
     trigger: str | None = None
+
+    @field_validator("mood")
+    @classmethod
+    def validate_mood(cls, v: str | None) -> str | None:
+        if v is not None and v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError("Mood must be one of: neutral, happy, sad, angry, bored")
+        return v
 
 
 class MoodHistoryResponse(MoodHistoryBase):

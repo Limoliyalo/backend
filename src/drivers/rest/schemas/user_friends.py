@@ -2,22 +2,22 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.domain.value_objects.telegram_id import TelegramId
 
 
 class UserFriendBase(BaseModel):
-    owner_tg_id: int
-    friend_tg_id: int
+    owner_tg_id: int = Field(..., gt=0, description="Owner Telegram ID")
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
 class UserFriendCreate(BaseModel):
-    friend_tg_id: int
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
 class UserFriendUpdate(BaseModel):
-    friend_tg_id: int
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
 class UserFriendResponse(UserFriendBase):

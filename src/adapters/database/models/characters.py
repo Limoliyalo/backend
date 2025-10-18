@@ -77,7 +77,7 @@ class CharacterItemModel(Base):
         Index(
             "idx_character_items_favourite",
             "character_id",
-            postgresql_where=text("is_favourite = true"),
+            postgresql_where=text("is_favorite = true"),
         ),
     )
 
@@ -101,7 +101,7 @@ class CharacterItemModel(Base):
         nullable=False,
         server_default=text("false"),
     )
-    is_favourite: Mapped[bool] = mapped_column(
+    is_favorite: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         server_default=text("false"),
@@ -147,7 +147,7 @@ class CharacterBackgroundModel(Base):
         nullable=False,
         server_default=text("false"),
     )
-    is_favourite: Mapped[bool] = mapped_column(
+    is_favorite: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         server_default=text("false"),

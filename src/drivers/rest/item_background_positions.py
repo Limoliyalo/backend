@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_background_positions import (
     ItemBackgroundPositionCreate,
     ItemBackgroundPositionResponse,
@@ -42,8 +43,11 @@ async def list_positions_for_item(
     ),
 ):
     """Получить все позиции предмета на фоне (требуется админ-доступ)"""
-    positions = await use_case.execute(item_id, background_id)
-    return [ItemBackgroundPositionResponse.model_validate(pos) for pos in positions]
+    try:
+        positions = await use_case.execute(item_id, background_id)
+        return [ItemBackgroundPositionResponse.model_validate(pos) for pos in positions]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get(

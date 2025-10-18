@@ -13,8 +13,12 @@ class RefreshToken:
     jti: UUID
     expires_at: datetime
     revoked: bool = False
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def revoke(self) -> None:
         if not self.revoked:
@@ -22,4 +26,4 @@ class RefreshToken:
             self.touch()
 
     def touch(self) -> None:
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)

@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from typing import Any
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.domain.value_objects.telegram_id import TelegramId
 
@@ -9,12 +9,31 @@ from src.domain.value_objects.telegram_id import TelegramId
 class UserSettingsBase(BaseModel):
     quiet_start_time: time | None = None
     quiet_end_time: time | None = None
-    muted_days: list[str] = []
+    muted_days: list[str] = Field(default=[], description="List of muted days")
     do_not_disturb: bool = False
+
+    @field_validator("muted_days")
+    @classmethod
+    def validate_muted_days(cls, v: list[str]) -> list[str]:
+        valid_days = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ]
+        for day in v:
+            if day.lower() not in valid_days:
+                raise ValueError(
+                    f"Invalid day: {day}. Must be one of: {', '.join(valid_days)}"
+                )
+        return v
 
 
 class UserSettingsCreate(UserSettingsBase):
-    user_tg_id: int
+    user_tg_id: int = Field(..., gt=0, description="Telegram ID must be positive")
 
 
 class UserSettingsUpdate(BaseModel):
@@ -22,6 +41,26 @@ class UserSettingsUpdate(BaseModel):
     quiet_end_time: time | None = None
     muted_days: list[str] | None = None
     do_not_disturb: bool | None = None
+
+    @field_validator("muted_days")
+    @classmethod
+    def validate_muted_days(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None:
+            valid_days = [
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday",
+            ]
+            for day in v:
+                if day.lower() not in valid_days:
+                    raise ValueError(
+                        f"Invalid day: {day}. Must be one of: {', '.join(valid_days)}"
+                    )
+        return v
 
 
 class UserSettingsResponse(UserSettingsBase):

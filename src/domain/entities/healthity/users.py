@@ -13,8 +13,12 @@ class User:
     is_active: bool = True
     is_admin: bool = False
     balance: int = 0
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def activate(self) -> None:
         if not self.is_active:
@@ -47,7 +51,7 @@ class User:
         self.touch()
 
     def touch(self) -> None:
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @dataclass
@@ -58,8 +62,12 @@ class UserSettings:
     quiet_end_time: time | None = None
     muted_days: List[str] = field(default_factory=list)
     do_not_disturb: bool = False
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def toggle_do_not_disturb(self, value: bool | None = None) -> None:
         self.do_not_disturb = not self.do_not_disturb if value is None else value
@@ -75,7 +83,7 @@ class UserSettings:
         self.touch()
 
     def touch(self) -> None:
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @dataclass
@@ -83,4 +91,6 @@ class UserFriend:
     id: uuid.UUID
     owner_tg_id: TelegramId
     friend_tg_id: TelegramId
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )

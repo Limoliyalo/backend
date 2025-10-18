@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import (
+    RepositoryError,
+    IntegrityConstraintError,
+)
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.catalog import ItemCreate, ItemResponse, ItemUpdate
 from src.use_cases.items.manage_items import (
     CreateItemInput,
@@ -33,8 +37,11 @@ async def list_items(
     ),
 ):
     """Получить список всех предметов (требуется админ-доступ)"""
-    items = await use_case.execute(limit=limit, offset=offset)
-    return [ItemResponse.model_validate(item) for item in items]
+    try:
+        items = await use_case.execute(limit=limit, offset=offset)
+        return [ItemResponse.model_validate(item) for item in items]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get("/{item_id}/admin", response_model=ItemResponse)
@@ -48,6 +55,8 @@ async def get_item(
     try:
         item = await use_case.execute(item_id)
         return ItemResponse.model_validate(item)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -70,8 +79,11 @@ async def create_item(
         required_level=data.required_level,
         is_available=data.is_available,
     )
-    item = await use_case.execute(input_data)
-    return ItemResponse.model_validate(item)
+    try:
+        item = await use_case.execute(input_data)
+        return ItemResponse.model_validate(item)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/{item_id}/admin", response_model=ItemResponse)
@@ -96,6 +108,10 @@ async def update_item(
         )
         item = await use_case.execute(input_data)
         return ItemResponse.model_validate(item)
+    except IntegrityConstraintError as e:
+        raise BadRequestException(detail=str(e))
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -112,6 +128,8 @@ async def delete_item(
     """Удалить предмет (требуется админ-доступ)"""
     try:
         await use_case.execute(item_id)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -124,5 +142,8 @@ async def list_items_catalog(
     ),
 ):
     """Получить каталог доступных предметов (открытый endpoint)"""
-    items = await use_case.execute()
-    return [ItemResponse.model_validate(item) for item in items]
+    try:
+        items = await use_case.execute()
+        return [ItemResponse.model_validate(item) for item in items]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))

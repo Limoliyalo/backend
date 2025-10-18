@@ -5,6 +5,8 @@ import uuid
 from sqlalchemy import delete, select
 
 from src.adapters.database.models.transactions import TransactionModel
+from src.adapters.database.models.catalog import ItemModel, BackgroundModel
+from src.adapters.database.models.user import UserModel
 from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.domain.entities.healthity.transactions import Transaction
@@ -19,6 +21,18 @@ class SQLAlchemyTransactionsRepository(
 
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
+
+    async def _validate_foreign_keys(self, instance: TransactionModel) -> None:
+        """Validate foreign key constraints for transaction"""
+        await self._check_entity_exists(UserModel, instance.user_tg_id, "User")
+
+        if instance.related_item_id is not None:
+            await self._check_entity_exists(ItemModel, instance.related_item_id, "Item")
+
+        if instance.related_background_id is not None:
+            await self._check_entity_exists(
+                BackgroundModel, instance.related_background_id, "Background"
+            )
 
     async def list_for_user(self, user_tg_id: TelegramId) -> list[Transaction]:
         async with self._uow() as uow:

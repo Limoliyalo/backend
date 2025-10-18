@@ -41,6 +41,12 @@ class DailyActivitiesRepository(ABC):
     async def upsert(self, activity: DailyActivity) -> DailyActivity:
         raise NotImplementedError
 
+    @abstractmethod
+    async def get_by_character_activity_date(
+        self, character_id: uuid.UUID, activity_type_id: uuid.UUID, date: datetime
+    ) -> DailyActivity | None:
+        raise NotImplementedError
+
 
 class DailyProgressRepository(ABC):
     @abstractmethod
@@ -57,6 +63,12 @@ class DailyProgressRepository(ABC):
 
     @abstractmethod
     async def upsert(self, progress: DailyProgress) -> DailyProgress:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_character_date(
+        self, character_id: uuid.UUID, date: datetime
+    ) -> DailyProgress | None:
         raise NotImplementedError
 
 
