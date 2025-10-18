@@ -676,13 +676,13 @@ def upgrade() -> None:
         """
         INSERT INTO activity_types (name, unit, color, daily_goal_default)
         VALUES
-            ('water', 'ml', '
-            ('food', 'kcal', '
-            ('exercise', 'minutes', '
-            ('sleep', 'hours', '
-            ('meditation', 'minutes', '
-            ('steps', 'steps', '
-            ('reading', 'minutes', '
+            ('water', 'ml', '#2196F3', 2000),
+            ('food', 'kcal', '#4CAF50', 2000),
+            ('exercise', 'minutes', '#FF9800', 30),
+            ('sleep', 'hours', '#9C27B0', 8),
+            ('meditation', 'minutes', '#00BCD4', 15),
+            ('steps', 'steps', '#8BC34A', 10000),
+            ('reading', 'minutes', '#795548', 30)
         ON CONFLICT (name) DO NOTHING;
         """
     )
