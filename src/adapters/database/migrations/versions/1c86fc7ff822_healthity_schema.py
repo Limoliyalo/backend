@@ -13,7 +13,6 @@ import sqlalchemy as sa
 from sqlalchemy import inspect
 from sqlalchemy.dialects import postgresql
 
-
 revision: str = "1c86fc7ff822"
 down_revision: Union[str, Sequence[str], None] = "5b0e3c0b1b8f"
 branch_labels: Union[str, Sequence[str], None] = None
@@ -314,7 +313,7 @@ def upgrade() -> None:
             "is_active", sa.Boolean(), nullable=False, server_default=sa.text("false")
         ),
         sa.Column(
-            "is_favourite",
+            "is_favorite",
             sa.Boolean(),
             nullable=False,
             server_default=sa.text("false"),
@@ -352,7 +351,7 @@ def upgrade() -> None:
             "is_active", sa.Boolean(), nullable=False, server_default=sa.text("false")
         ),
         sa.Column(
-            "is_favourite",
+            "is_favorite",
             sa.Boolean(),
             nullable=False,
             server_default=sa.text("false"),
@@ -599,8 +598,8 @@ def upgrade() -> None:
     op.create_index(
         "idx_character_items_favourite",
         "character_items",
-        ["character_id", "is_favourite"],
-        postgresql_where=sa.text("is_favourite = true"),
+        ["character_id", "is_favorite"],
+        postgresql_where=sa.text("is_favorite = true"),
     )
     op.create_index(
         "idx_character_backgrounds_character", "character_backgrounds", ["character_id"]
@@ -677,13 +676,13 @@ def upgrade() -> None:
         """
         INSERT INTO activity_types (name, unit, color, daily_goal_default)
         VALUES
-            ('water', 'ml', '#2196F3', 2000),
-            ('food', 'kcal', '#4CAF50', 2000),
-            ('exercise', 'minutes', '#FF9800', 30),
-            ('sleep', 'hours', '#9C27B0', 8),
-            ('meditation', 'minutes', '#00BCD4', 15),
-            ('steps', 'steps', '#8BC34A', 10000),
-            ('reading', 'minutes', '#795548', 30)
+            ('water', 'ml', '
+            ('food', 'kcal', '
+            ('exercise', 'minutes', '
+            ('sleep', 'hours', '
+            ('meditation', 'minutes', '
+            ('steps', 'steps', '
+            ('reading', 'minutes', '
         ON CONFLICT (name) DO NOTHING;
         """
     )
@@ -742,7 +741,7 @@ def upgrade() -> None:
             i.name AS item_name,
             ic.name AS category_name,
             ci.is_active,
-            ci.is_favourite,
+            ci.is_favorite,
             ci.purchased_at
         FROM character_items ci
         JOIN items i ON ci.item_id = i.id

@@ -8,7 +8,8 @@ from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.character_items import (
     CharacterItemPurchase,
     CharacterItemResponse,
@@ -29,7 +30,6 @@ from src.use_cases.character_items.manage_character_items import (
     UpdateCharacterItemUseCase,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
-from src.drivers.rest.exceptions import BadRequestException
 
 router = APIRouter(prefix="/character-items", tags=["Character Items"])
 
@@ -44,8 +44,11 @@ async def list_character_items(
     ),
 ):
     """Получить список предметов персонажа (требуется админ-доступ)"""
-    items = await use_case.execute(character_id)
-    return [CharacterItemResponse.model_validate(item) for item in items]
+    try:
+        items = await use_case.execute(character_id)
+        return [CharacterItemResponse.model_validate(item) for item in items]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get("/{character_item_id}/admin", response_model=CharacterItemResponse)
@@ -80,7 +83,8 @@ async def create_character_item(
     input_data = PurchaseItemInput(
         character_id=data.character_id,
         item_id=data.item_id,
-        is_equipped=data.is_equipped,
+        is_active=data.is_active,
+        is_favorite=data.is_favorite,
     )
     item = await use_case.execute(input_data)
     return CharacterItemResponse.model_validate(item)
@@ -100,7 +104,8 @@ async def update_character_item(
     try:
         input_data = UpdateCharacterItemInput(
             character_item_id=character_item_id,
-            is_equipped=data.is_equipped,
+            is_active=data.is_active,
+            is_favorite=data.is_favorite,
         )
         item = await use_case.execute(input_data)
         return CharacterItemResponse.model_validate(item)

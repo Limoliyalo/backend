@@ -1,7 +1,7 @@
 """SQLAlchemy implementation of blacklisted tokens repository."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable
 from uuid import UUID
 
@@ -86,9 +86,7 @@ class SQLAlchemyBlacklistedTokensRepository(BlacklistedTokensRepository):
         Note: This is a marker operation. In a real implementation with active
         token tracking, you would blacklist specific tokens here.
         """
-        # This is intentionally a no-op because we don't track all issued tokens.
-        # The revoke_all functionality is handled by refresh tokens.
-        # For access tokens, we can't blacklist what we don't track.
+
         logger.debug(
             {
                 "action": "SQLAlchemyBlacklistedTokensRepository.blacklist_all_for_user",
@@ -105,7 +103,7 @@ class SQLAlchemyBlacklistedTokensRepository(BlacklistedTokensRepository):
         async with self._uow_factory() as uow:
             session: AsyncSession = uow.session
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             stmt = delete(BlacklistedTokenModel).where(
                 BlacklistedTokenModel.expires_at < now
             )

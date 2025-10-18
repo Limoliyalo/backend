@@ -9,6 +9,7 @@ from src.adapters.database.models.characters import (
     CharacterModel,
     ItemBackgroundPositionModel,
 )
+from src.adapters.database.models.catalog import ItemModel, BackgroundModel
 from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.adapters.repositories.exceptions import RepositoryError
@@ -116,6 +117,21 @@ class SQLAlchemyCharacterItemsRepository(
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
+    async def get_by_id(self, character_item_id: uuid.UUID) -> CharacterItem | None:
+        model = await super().get(character_item_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    async def _validate_foreign_keys(self, instance: CharacterItemModel) -> None:
+        """Validate foreign key constraints for character item"""
+
+        await self._check_entity_exists(
+            CharacterModel, instance.character_id, "Character"
+        )
+
+        await self._check_entity_exists(ItemModel, instance.item_id, "Item")
+
     async def list_for_character(self, character_id: uuid.UUID) -> list[CharacterItem]:
         async with self._uow() as uow:
             result = await uow.session.execute(
@@ -132,7 +148,7 @@ class SQLAlchemyCharacterItemsRepository(
             character_id=character_item.character_id,
             item_id=character_item.item_id,
             is_active=character_item.is_active,
-            is_favourite=character_item.is_favourite,
+            is_favorite=character_item.is_favorite,
             purchased_at=character_item.purchased_at,
         )
         saved_model = await super().add(model)
@@ -145,11 +161,18 @@ class SQLAlchemyCharacterItemsRepository(
                 raise RepositoryError("Character item not found")
 
             model.is_active = character_item.is_active
-            model.is_favourite = character_item.is_favourite
+            model.is_favorite = character_item.is_favorite
 
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def remove(self, character_item_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(CharacterItemModel, character_item_id)
+            if model is None:
+                raise RepositoryError("Character item not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: CharacterItemModel) -> CharacterItem:
@@ -158,7 +181,7 @@ class SQLAlchemyCharacterItemsRepository(
             character_id=model.character_id,
             item_id=model.item_id,
             is_active=model.is_active,
-            is_favourite=model.is_favourite,
+            is_favorite=model.is_favorite,
             purchased_at=model.purchased_at,
         )
 
@@ -170,6 +193,17 @@ class SQLAlchemyCharacterBackgroundsRepository(
 
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
+
+    async def _validate_foreign_keys(self, instance: CharacterBackgroundModel) -> None:
+        """Validate foreign key constraints for character background"""
+
+        await self._check_entity_exists(
+            CharacterModel, instance.character_id, "Character"
+        )
+
+        await self._check_entity_exists(
+            BackgroundModel, instance.background_id, "Background"
+        )
 
     async def list_for_character(
         self, character_id: uuid.UUID
@@ -191,7 +225,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
             character_id=character_background.character_id,
             background_id=character_background.background_id,
             is_active=character_background.is_active,
-            is_favourite=character_background.is_favourite,
+            is_favorite=character_background.is_favorite,
             purchased_at=character_background.purchased_at,
         )
         saved_model = await super().add(model)
@@ -208,11 +242,22 @@ class SQLAlchemyCharacterBackgroundsRepository(
                 raise RepositoryError("Character background not found")
 
             model.is_active = character_background.is_active
-            model.is_favourite = character_background.is_favourite
+            model.is_favorite = character_background.is_favorite
 
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def get_by_id(
+        self, character_background_id: uuid.UUID
+    ) -> CharacterBackground | None:
+        model = await super().get(character_background_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    async def remove(self, character_background_id: uuid.UUID) -> None:
+        await super().remove(character_background_id)
 
     @staticmethod
     def _to_domain(model: CharacterBackgroundModel) -> CharacterBackground:
@@ -221,7 +266,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
             character_id=model.character_id,
             background_id=model.background_id,
             is_active=model.is_active,
-            is_favourite=model.is_favourite,
+            is_favorite=model.is_favorite,
             purchased_at=model.purchased_at,
         )
 
@@ -234,6 +279,17 @@ class SQLAlchemyItemBackgroundPositionsRepository(
 
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
+
+    async def _validate_foreign_keys(
+        self, instance: ItemBackgroundPositionModel
+    ) -> None:
+        """Validate foreign key constraints for item background position"""
+
+        await self._check_entity_exists(ItemModel, instance.item_id, "Item")
+
+        await self._check_entity_exists(
+            BackgroundModel, instance.background_id, "Background"
+        )
 
     async def get(
         self, item_id: uuid.UUID, background_id: uuid.UUID

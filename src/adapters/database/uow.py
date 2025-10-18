@@ -18,7 +18,7 @@ class AbstractUnitOfWork(AbstractAsyncContextManager["AbstractUnitOfWork"], ABC)
 
     @property
     def session(self) -> AsyncSession:
-        if self._session is None:  # pragma: no cover - defensive branch
+        if self._session is None:
             raise RuntimeError("UnitOfWork session is not initialized")
         return self._session
 
@@ -52,8 +52,7 @@ class AbstractUnitOfWork(AbstractAsyncContextManager["AbstractUnitOfWork"], ABC)
     @abstractmethod
     async def _create_session(
         self,
-    ) -> AsyncSession:  # pragma: no cover - abstract method
-        ...
+    ) -> AsyncSession: ...
 
 
 class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
@@ -68,7 +67,7 @@ class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
     async def _create_session(self) -> AsyncSession:
         session_or_awaitable = self._session_factory()
         if hasattr(session_or_awaitable, "__await__"):
-            return await session_or_awaitable  # type: ignore[return-value]
+            return await session_or_awaitable
         if not isinstance(session_or_awaitable, AsyncSession):
             raise TypeError("Session factory must return an AsyncSession instance")
         return session_or_awaitable

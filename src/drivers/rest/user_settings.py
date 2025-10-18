@@ -5,7 +5,8 @@ from src.container import ApplicationContainer
 from src.core.auth.dependencies import get_access_token_payload
 from src.core.auth.jwt_service import TokenPayload
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.user_settings import (
     UserSettingsResponse,
     UserSettingsUpdate,
@@ -33,6 +34,8 @@ async def get_my_settings(
     try:
         settings = await use_case.execute(telegram_id)
         return UserSettingsResponse.model_validate(settings)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -55,8 +58,11 @@ async def update_my_settings(
         muted_days=data.muted_days,
         do_not_disturb=data.do_not_disturb,
     )
-    settings = await use_case.execute(input_data)
-    return UserSettingsResponse.model_validate(settings)
+    try:
+        settings = await use_case.execute(input_data)
+        return UserSettingsResponse.model_validate(settings)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
@@ -71,5 +77,7 @@ async def delete_my_settings(
     telegram_id = int(payload.sub)
     try:
         await use_case.execute(telegram_id)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))

@@ -5,13 +5,13 @@ from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
 from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.transactions import TransactionsRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 @dataclass
 class CreateTransactionInput:
     user_tg_id: int
     amount: int
-    balance_after: int
     type: str
     related_item_id: uuid.UUID | None = None
     related_background_id: uuid.UUID | None = None
@@ -19,15 +19,47 @@ class CreateTransactionInput:
 
 
 class CreateTransactionUseCase:
-    def __init__(self, transactions_repository: TransactionsRepository) -> None:
+    def __init__(
+        self,
+        transactions_repository: TransactionsRepository,
+        users_repository: UsersRepository,
+    ) -> None:
         self._transactions_repository = transactions_repository
+        self._users_repository = users_repository
 
     async def execute(self, data: CreateTransactionInput) -> Transaction:
+
+        user = await self._users_repository.get_by_telegram_id(
+            TelegramId(data.user_tg_id)
+        )
+        if user is None:
+            raise EntityNotFoundException("User not found")
+
+        if data.type == "deposit":
+            new_balance = user.balance + data.amount
+        elif data.type in [
+            "purchase",
+            "withdraw",
+            "purchase_item",
+            "purchase_background",
+        ]:
+            new_balance = user.balance - data.amount
+        else:
+            raise ValueError(
+                "Invalid transaction type only deposit, purchase, withdraw, purchase_item, purchase_background are allowed"
+            )
+
+        if new_balance < 0:
+            raise ValueError("Insufficient funds")
+
+        user.balance = new_balance
+        await self._users_repository.update(user)
+
         transaction = Transaction(
             id=uuid.uuid4(),
             user_tg_id=TelegramId(data.user_tg_id),
             amount=data.amount,
-            balance_after=data.balance_after,
+            balance_after=new_balance,
             type=data.type,
             related_item_id=data.related_item_id,
             related_background_id=data.related_background_id,

@@ -183,6 +183,20 @@ class SQLAlchemyDailyActivitiesRepository(
                 )
             )
 
+    async def get_by_character_activity_date(
+        self, character_id: uuid.UUID, activity_type_id: uuid.UUID, date: datetime
+    ) -> DailyActivity | None:
+        model = await self.first(
+            filters={
+                "character_id": character_id,
+                "activity_type_id": activity_type_id,
+                "date": date,
+            }
+        )
+        if model is None:
+            return None
+        return self._to_domain(model)
+
     @staticmethod
     def _to_domain(model: DailyActivityModel) -> DailyActivity:
         return DailyActivity(
@@ -291,6 +305,14 @@ class SQLAlchemyDailyProgressRepository(
                     DailyProgressModel.id == progress_id
                 )
             )
+
+    async def get_by_character_date(
+        self, character_id: uuid.UUID, date: datetime
+    ) -> DailyProgress | None:
+        model = await self.first(filters={"character_id": character_id, "date": date})
+        if model is None:
+            return None
+        return self._to_domain(model)
 
     @staticmethod
     def _to_domain(model: DailyProgressModel) -> DailyProgress:

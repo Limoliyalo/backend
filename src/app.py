@@ -26,7 +26,6 @@ from src.drivers.rest import (
     item_background_positions,
 )
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -43,7 +42,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.container = container  # type: ignore[attr-defined]
+        app.container = container
         try:
             yield
         finally:
@@ -52,7 +51,6 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Healthity backend", lifespan=lifespan, version="1.0.0")
 
-    # Middleware для логирования запросов
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         logger.debug(f"Request: {request.method} {request.url}")
@@ -75,7 +73,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Register routers
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(users.router, prefix="/api/v1")
     app.include_router(characters.router, prefix="/api/v1")

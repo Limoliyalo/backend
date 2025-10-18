@@ -8,14 +8,15 @@ from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.catalog import ItemsRepository
 from src.ports.repositories.healthity.characters import CharacterItemsRepository
 from src.ports.repositories.healthity.transactions import TransactionsRepository
-from src.ports.repositories.users import UsersRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 @dataclass
 class PurchaseItemInput:
     character_id: uuid.UUID
     item_id: uuid.UUID
-    is_equipped: bool = False
+    is_active: bool = False
+    is_favorite: bool = False
 
 
 class ListCharacterItemsUseCase:
@@ -48,7 +49,8 @@ class PurchaseItemUseCase:
             id=uuid.uuid4(),
             character_id=data.character_id,
             item_id=data.item_id,
-            is_equipped=data.is_equipped,
+            is_active=data.is_active,
+            is_favorite=data.is_favorite,
         )
         return await self._character_items_repository.add(item)
 
@@ -84,7 +86,8 @@ class UnequipItemUseCase:
 @dataclass
 class UpdateCharacterItemInput:
     character_item_id: uuid.UUID
-    is_equipped: bool | None = None
+    is_active: bool | None = None
+    is_favorite: bool | None = None
 
 
 class UpdateCharacterItemUseCase:
@@ -98,11 +101,14 @@ class UpdateCharacterItemUseCase:
                 f"CharacterItem {data.character_item_id} not found"
             )
 
-        if data.is_equipped is not None:
-            if data.is_equipped:
+        if data.is_active is not None:
+            if data.is_active:
                 item.equip()
             else:
                 item.unequip()
+
+        if data.is_favorite is not None:
+            item.is_favorite = data.is_favorite
 
         return await self._character_items_repository.update(item)
 
@@ -157,7 +163,7 @@ class PurchaseItemWithBalanceUseCase:
         self._transactions_repository = transactions_repository
 
     async def execute(self, data: PurchaseItemWithBalanceInput) -> CharacterItem:
-        # Получить предмет из каталога
+
         item = await self._items_repository.get_by_id(data.item_id)
         if item is None:
             raise EntityNotFoundException(f"Item {data.item_id} not found")
@@ -165,34 +171,29 @@ class PurchaseItemWithBalanceUseCase:
         if not item.is_available:
             raise ValueError("Item is not available for purchase")
 
-        # Проверить, не куплен ли уже предмет
         existing_items = await self._character_items_repository.list_for_character(
             data.character_id
         )
         if any(ci.item_id == data.item_id for ci in existing_items):
             raise ValueError("Item already purchased")
 
-        # Получить пользователя и проверить баланс
         telegram_id = TelegramId(data.user_tg_id)
         user = await self._users_repository.get_by_telegram_id(telegram_id)
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
-        # Списать средства
         user.withdraw(item.cost)
         updated_user = await self._users_repository.update(user)
 
-        # Создать предмет для персонажа
         character_item = CharacterItem(
             id=uuid.uuid4(),
             character_id=data.character_id,
             item_id=data.item_id,
             is_active=False,
-            is_favourite=False,
+            is_favorite=False,
         )
         created_item = await self._character_items_repository.add(character_item)
 
-        # Создать транзакцию
         transaction = Transaction(
             id=uuid.uuid4(),
             user_tg_id=telegram_id,

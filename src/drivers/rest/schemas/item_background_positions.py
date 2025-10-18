@@ -1,14 +1,14 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ItemBackgroundPositionBase(BaseModel):
-    item_id: UUID
-    background_id: UUID
-    position_x: float
-    position_y: float
-    position_z: float = 0.0
+    item_id: UUID = Field(..., description="Item ID")
+    background_id: UUID = Field(..., description="Background ID")
+    position_x: float = Field(..., description="X position")
+    position_y: float = Field(..., description="Y position")
+    position_z: float = Field(default=0.0, description="Z position")
 
 
 class ItemBackgroundPositionCreate(ItemBackgroundPositionBase):
@@ -16,9 +16,9 @@ class ItemBackgroundPositionCreate(ItemBackgroundPositionBase):
 
 
 class ItemBackgroundPositionUpdate(BaseModel):
-    position_x: float
-    position_y: float
-    position_z: float = 0.0
+    position_x: float = Field(..., description="X position")
+    position_y: float = Field(..., description="Y position")
+    position_z: float = Field(default=0.0, description="Z position")
 
 
 class ItemBackgroundPositionResponse(ItemBackgroundPositionBase):

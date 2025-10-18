@@ -15,4 +15,6 @@ class Transaction:
     related_item_id: uuid.UUID | None = None
     related_background_id: uuid.UUID | None = None
     description: str | None = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )

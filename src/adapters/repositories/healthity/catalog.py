@@ -2,6 +2,7 @@ from collections.abc import Callable
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from src.adapters.database.models.catalog import (
     BackgroundModel,
@@ -10,7 +11,10 @@ from src.adapters.database.models.catalog import (
 )
 from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
-from src.adapters.repositories.exceptions import RepositoryError
+from src.adapters.repositories.exceptions import (
+    RepositoryError,
+    IntegrityConstraintError,
+)
 from src.domain.entities.healthity.catalog import Background, Item, ItemCategory
 from src.ports.repositories.healthity.catalog import (
     BackgroundsRepository,
@@ -126,9 +130,27 @@ class SQLAlchemyItemsRepository(SQLAlchemyRepository[ItemModel], ItemsRepository
             model.required_level = item.required_level
             model.is_available = item.is_available
 
-            await uow.session.flush()
-            await uow.session.refresh(model)
-            return self._to_domain(model)
+            try:
+                await uow.session.flush()
+                await uow.session.refresh(model)
+                return self._to_domain(model)
+            except IntegrityError as exc:
+                await uow.rollback()
+                error_msg = str(exc.orig) if hasattr(exc, "orig") else str(exc)
+                if (
+                    "check constraint" in error_msg.lower()
+                    or "violates check" in error_msg.lower()
+                ):
+                    raise IntegrityConstraintError(
+                        "Invalid data: constraint violation"
+                    ) from exc
+                else:
+                    raise IntegrityConstraintError(
+                        "Integrity constraint violated"
+                    ) from exc
+            except SQLAlchemyError as exc:
+                await uow.rollback()
+                raise RepositoryError("Database operation failed") from exc
 
     async def delete(self, item_id: uuid.UUID) -> None:
         async with self._uow() as uow:

@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.activities import (
     ActivityTypeCreate,
     ActivityTypeResponse,
@@ -36,8 +37,11 @@ async def list_activity_types(
     ),
 ):
     """Получить список всех типов активностей (требуется админ-доступ)"""
-    activity_types = await use_case.execute()
-    return [ActivityTypeResponse.model_validate(at) for at in activity_types]
+    try:
+        activity_types = await use_case.execute()
+        return [ActivityTypeResponse.model_validate(at) for at in activity_types]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get(
@@ -79,8 +83,11 @@ async def create_activity_type(
         color=data.color,
         daily_goal_default=data.daily_goal_default,
     )
-    activity_type = await use_case.execute(input_data)
-    return ActivityTypeResponse.model_validate(activity_type)
+    try:
+        activity_type = await use_case.execute(input_data)
+        return ActivityTypeResponse.model_validate(activity_type)
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch(

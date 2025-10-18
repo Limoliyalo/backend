@@ -6,11 +6,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from src.domain.value_objects.telegram_id import TelegramId
 
 
-# User schemas
 class UserBase(BaseModel):
-    telegram_id: int = Field(..., description="Telegram ID пользователя")
+    telegram_id: int = Field(..., gt=0, description="Telegram ID пользователя")
     is_active: bool = True
-    balance: int = Field(0, ge=0)
+    balance: int = Field(0, ge=0, description="Баланс пользователя")
 
 
 class UserCreate(UserBase):
@@ -21,7 +20,8 @@ class UserCreate(UserBase):
 
 class UserRegister(BaseModel):
     """Публичная регистрация - только telegram_id и пароль"""
-    telegram_id: int = Field(..., description="Telegram ID пользователя")
+
+    telegram_id: int = Field(..., gt=0, description="Telegram ID пользователя")
     password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
 
 

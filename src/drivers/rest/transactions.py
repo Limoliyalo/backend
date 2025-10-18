@@ -75,7 +75,6 @@ async def create_transaction(
     input_data = CreateTransactionInput(
         user_tg_id=data.user_tg_id,
         amount=data.amount,
-        balance_after=0,  # Будет вычислен в use case
         type=data.type,
         related_item_id=data.related_item_id,
         related_background_id=data.related_background_id,
@@ -153,7 +152,6 @@ async def list_my_transactions(
 
     telegram_id = int(payload.sub)
 
-    # Фильтрация по датам или типу
     if start_date and end_date:
         transactions = await transactions_repo.list_for_user_by_date_range(
             TelegramId(telegram_id), start_date, end_date

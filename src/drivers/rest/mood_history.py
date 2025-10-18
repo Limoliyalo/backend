@@ -165,10 +165,9 @@ async def list_my_mood_history(
     """
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Фильтрация по датам или limit
         if start_date and end_date:
             mood_history = await mood_repo.list_for_date_range(
                 character.id, start_date, end_date
@@ -199,10 +198,9 @@ async def create_my_mood_entry(
     """Создать запись о настроении для текущего пользователя"""
     telegram_id = int(payload.sub)
     try:
-        # Получить персонажа пользователя
+
         character = await get_character_use_case.execute(telegram_id)
 
-        # Создать запись о настроении
         input_data = CreateMoodHistoryInput(
             character_id=character.id,
             mood=mood,

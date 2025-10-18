@@ -9,7 +9,7 @@ class DeleteCharacterUseCase:
         self._characters_repository = characters_repository
 
     async def execute(self, character_id: uuid.UUID) -> None:
-        # Проверяем существование перед удалением
+
         character = await self._characters_repository.get_by_id(character_id)
         if character is None:
             raise EntityNotFoundException(f"Character {character_id} not found")

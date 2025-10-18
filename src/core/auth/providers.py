@@ -10,7 +10,6 @@ from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import UnauthorizedException
 from src.ports.repositories.auth import BlacklistedTokensRepository
 
-
 logger = logging.getLogger(__name__)
 http_bearer = HTTPBearer(auto_error=False)
 
@@ -56,10 +55,9 @@ class AccessTokenPayloadProvider:
         except (
             InvalidTokenException,
             TokenExpiredException,
-        ) as exc:  # pragma: no cover - security critical path
+        ) as exc:
             raise _unauthorized(str(exc)) from exc
 
-        # Check if token is blacklisted (if blacklist repository is available)
         if self._blacklisted_tokens_repository:
             is_blacklisted = await self._blacklisted_tokens_repository.is_blacklisted(
                 payload.jti
@@ -92,5 +90,5 @@ class CurrentUserProvider:
 
         try:
             return TelegramId(int(payload.sub))
-        except (TypeError, ValueError) as exc:  # pragma: no cover - subject integrity
+        except (TypeError, ValueError) as exc:
             raise _unauthorized("Invalid subject claim") from exc

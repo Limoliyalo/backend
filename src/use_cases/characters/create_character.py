@@ -1,9 +1,12 @@
+import logging
 import uuid
 from dataclasses import dataclass
 
 from src.domain.entities.healthity.characters import Character
 from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.characters import CharactersRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -21,6 +24,7 @@ class CreateCharacterUseCase:
         self._characters_repository = characters_repository
 
     async def execute(self, data: CreateCharacterInput) -> Character:
+        logger.debug(f"Creating character for user {data.user_tg_id}")
         character = Character(
             id=uuid.uuid4(),
             user_tg_id=TelegramId(data.user_tg_id),
@@ -30,4 +34,7 @@ class CreateCharacterUseCase:
             level=data.level,
             total_experience=data.total_experience,
         )
-        return await self._characters_repository.add(character)
+        logger.debug(f"Character created: {character}")
+        result = await self._characters_repository.add(character)
+        logger.debug(f"Character added to repository: {result}")
+        return result

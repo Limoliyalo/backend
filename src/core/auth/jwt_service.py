@@ -82,7 +82,7 @@ class JwtService:
             raise InvalidTokenException("Missing exp claim")
 
         exp = datetime.fromtimestamp(exp_ts, tz=timezone.utc)
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         if exp < now:
             raise TokenExpiredException()
 
@@ -113,7 +113,7 @@ class JwtService:
         expires_delta: timedelta,
         additional_claims: dict[str, Any] | None = None,
     ) -> tuple[str, datetime, UUID]:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         expire = now + expires_delta
         jti = uuid4()
 

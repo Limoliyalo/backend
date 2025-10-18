@@ -8,7 +8,7 @@ from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.catalog import BackgroundsRepository
 from src.ports.repositories.healthity.characters import CharacterBackgroundsRepository
 from src.ports.repositories.healthity.transactions import TransactionsRepository
-from src.ports.repositories.users import UsersRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 @dataclass
@@ -16,6 +16,7 @@ class PurchaseBackgroundInput:
     character_id: uuid.UUID
     background_id: uuid.UUID
     is_active: bool = False
+    is_favorite: bool = False
 
 
 class ListCharacterBackgroundsUseCase:
@@ -59,11 +60,12 @@ class PurchaseBackgroundUseCase:
             character_id=data.character_id,
             background_id=data.background_id,
             is_active=data.is_active,
+            is_favorite=data.is_favorite,
         )
         return await self._character_backgrounds_repository.add(background)
 
 
-class ActivateBackgroundUseCase:
+class EquipBackgroundUseCase:
     def __init__(
         self, character_backgrounds_repository: CharacterBackgroundsRepository
     ) -> None:
@@ -77,11 +79,25 @@ class ActivateBackgroundUseCase:
             raise EntityNotFoundException(
                 f"CharacterBackground {character_background_id} not found"
             )
+
+        existing_backgrounds = (
+            await self._character_backgrounds_repository.list_for_character(
+                background.character_id
+            )
+        )
+        for existing_background in existing_backgrounds:
+            if (
+                existing_background.id != background.id
+                and existing_background.is_active
+            ):
+                existing_background.deactivate()
+                await self._character_backgrounds_repository.update(existing_background)
+
         background.activate()
         return await self._character_backgrounds_repository.update(background)
 
 
-class DeactivateBackgroundUseCase:
+class UnequipBackgroundUseCase:
     def __init__(
         self, character_backgrounds_repository: CharacterBackgroundsRepository
     ) -> None:
@@ -103,6 +119,7 @@ class DeactivateBackgroundUseCase:
 class UpdateCharacterBackgroundInput:
     character_background_id: uuid.UUID
     is_active: bool | None = None
+    is_favorite: bool | None = None
 
 
 class UpdateCharacterBackgroundUseCase:
@@ -124,9 +141,28 @@ class UpdateCharacterBackgroundUseCase:
 
         if data.is_active is not None:
             if data.is_active:
+
+                existing_backgrounds = (
+                    await self._character_backgrounds_repository.list_for_character(
+                        background.character_id
+                    )
+                )
+                for existing_background in existing_backgrounds:
+                    if (
+                        existing_background.id != background.id
+                        and existing_background.is_active
+                    ):
+                        existing_background.deactivate()
+                        await self._character_backgrounds_repository.update(
+                            existing_background
+                        )
+
                 background.activate()
             else:
                 background.deactivate()
+
+        if data.is_favorite is not None:
+            background.is_favorite = data.is_favorite
 
         return await self._character_backgrounds_repository.update(background)
 
@@ -191,7 +227,7 @@ class PurchaseBackgroundWithBalanceUseCase:
     async def execute(
         self, data: PurchaseBackgroundWithBalanceInput
     ) -> CharacterBackground:
-        # Получить фон из каталога
+
         background = await self._backgrounds_repository.get_by_id(data.background_id)
         if background is None:
             raise EntityNotFoundException(f"Background {data.background_id} not found")
@@ -199,7 +235,6 @@ class PurchaseBackgroundWithBalanceUseCase:
         if not background.is_available:
             raise ValueError("Background is not available for purchase")
 
-        # Проверить, не куплен ли уже фон
         existing_backgrounds = (
             await self._character_backgrounds_repository.list_for_character(
                 data.character_id
@@ -208,36 +243,32 @@ class PurchaseBackgroundWithBalanceUseCase:
         if any(cb.background_id == data.background_id for cb in existing_backgrounds):
             raise ValueError("Background already purchased")
 
-        # Получить пользователя и проверить баланс
         telegram_id = TelegramId(data.user_tg_id)
         user = await self._users_repository.get_by_telegram_id(telegram_id)
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
-        # Списать средства
         user.withdraw(background.cost)
         updated_user = await self._users_repository.update(user)
 
-        # Создать фон для персонажа
         character_background = CharacterBackground(
             id=uuid.uuid4(),
             character_id=data.character_id,
             background_id=data.background_id,
             is_active=False,
-            is_favourite=False,
+            is_favorite=False,
         )
         created_background = await self._character_backgrounds_repository.add(
             character_background
         )
 
-        # Создать транзакцию
         transaction = Transaction(
             id=uuid.uuid4(),
             user_tg_id=telegram_id,
             amount=-background.cost,
             balance_after=updated_user.balance,
             type="purchase_background",
-            related_background_id=data.background_id,
+            related_item_id=data.background_id,
             description=f"Покупка фона: {background.name}",
         )
         await self._transactions_repository.add(transaction)

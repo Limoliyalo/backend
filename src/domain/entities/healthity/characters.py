@@ -14,8 +14,12 @@ class Character:
     current_mood: str = "neutral"
     level: int = 1
     total_experience: int = 0
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def set_mood(self, mood: str) -> None:
         self.current_mood = mood
@@ -34,7 +38,7 @@ class Character:
             self.level = expected_level
 
     def touch(self) -> None:
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @dataclass
@@ -43,8 +47,10 @@ class CharacterItem:
     character_id: uuid.UUID
     item_id: uuid.UUID
     is_active: bool = False
-    is_favourite: bool = False
-    purchased_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    is_favorite: bool = False
+    purchased_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def equip(self) -> None:
         self.is_active = True
@@ -53,7 +59,7 @@ class CharacterItem:
         self.is_active = False
 
     def toggle_favourite(self) -> None:
-        self.is_favourite = not self.is_favourite
+        self.is_favorite = not self.is_favorite
 
 
 @dataclass
@@ -62,8 +68,10 @@ class CharacterBackground:
     character_id: uuid.UUID
     background_id: uuid.UUID
     is_active: bool = False
-    is_favourite: bool = False
-    purchased_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    is_favorite: bool = False
+    purchased_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     def activate(self) -> None:
         self.is_active = True
@@ -72,7 +80,7 @@ class CharacterBackground:
         self.is_active = False
 
     def toggle_favourite(self) -> None:
-        self.is_favourite = not self.is_favourite
+        self.is_favorite = not self.is_favorite
 
 
 @dataclass

@@ -1,19 +1,19 @@
 from datetime import datetime
 from typing import Any
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.domain.value_objects.telegram_id import TelegramId
 
 
 class TransactionBase(BaseModel):
-    amount: int
+    amount: int = Field(..., description="Transaction amount")
     type: str
     description: str | None = None
 
 
 class TransactionCreate(TransactionBase):
-    user_tg_id: int
+    user_tg_id: int = Field(..., gt=0, description="Telegram ID must be positive")
     related_item_id: UUID | None = None
     related_background_id: UUID | None = None
 

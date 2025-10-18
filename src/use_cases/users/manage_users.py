@@ -8,7 +8,7 @@ from src.domain.entities.healthity.users import User
 from src.domain.exceptions import UserNotFoundException
 from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.transactions import TransactionsRepository
-from src.ports.repositories.users import UsersRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 @dataclass
@@ -110,7 +110,6 @@ class CreateUserUseCase:
             )
             raise ValueError(f"User with telegram_id {data.telegram_id} already exists")
 
-        # Hash password if provided
         password_hash = (
             self._password_hasher.get_password_hash(data.password)
             if data.password
@@ -237,11 +236,9 @@ class DepositUseCase:
         if user is None:
             raise UserNotFoundException(data.telegram_id)
 
-        # Пополнить баланс
         user.deposit(data.amount)
         updated_user = await self._users_repository.update(user)
 
-        # Создать транзакцию
         transaction = Transaction(
             id=uuid.uuid4(),
             user_tg_id=telegram_id,
@@ -298,11 +295,9 @@ class WithdrawUseCase:
         if user is None:
             raise UserNotFoundException(data.telegram_id)
 
-        # Списать средства
         user.withdraw(data.amount)
         updated_user = await self._users_repository.update(user)
 
-        # Создать транзакцию
         transaction = Transaction(
             id=uuid.uuid4(),
             user_tg_id=telegram_id,
@@ -359,7 +354,6 @@ class ChangePasswordUseCase:
         if user is None:
             raise UserNotFoundException(data.telegram_id)
 
-        # Проверить старый пароль
         if user.password_hash is None:
             raise ValueError("User does not have a password set")
 
@@ -368,7 +362,6 @@ class ChangePasswordUseCase:
         ):
             raise ValueError("Old password is incorrect")
 
-        # Установить новый пароль
         new_password_hash = self._password_hasher.get_password_hash(data.new_password)
         user.update_password(new_password_hash)
         updated_user = await self._users_repository.update(user)

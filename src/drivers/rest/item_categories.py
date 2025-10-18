@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.domain.exceptions import EntityNotFoundException
-from src.drivers.rest.exceptions import NotFoundException
+from src.adapters.repositories.exceptions import RepositoryError
+from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_categories import (
     ItemCategoryCreate,
     ItemCategoryResponse,
@@ -36,8 +37,11 @@ async def list_item_categories(
     ),
 ):
     """Получить список всех категорий предметов (требуется админ-доступ)"""
-    categories = await use_case.execute()
-    return [ItemCategoryResponse.model_validate(cat) for cat in categories]
+    try:
+        categories = await use_case.execute()
+        return [ItemCategoryResponse.model_validate(cat) for cat in categories]
+    except RepositoryError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.get(

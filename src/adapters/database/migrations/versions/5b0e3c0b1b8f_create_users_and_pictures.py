@@ -4,7 +4,6 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-
 revision: str = "5b0e3c0b1b8f"
 down_revision: str | None = None
 branch_labels: Sequence[str] | None = None
