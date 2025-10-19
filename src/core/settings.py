@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int
     jwt_refresh_token_expire_minutes: int
 
+    application_admin_telegram_ids: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
@@ -113,6 +115,20 @@ class Settings(BaseSettings):
             access_token_expire_minutes=self.jwt_access_token_expire_minutes,
             refresh_token_expire_minutes=self.jwt_refresh_token_expire_minutes,
         )
+
+    @property
+    def admin_telegram_ids(self) -> list[int]:
+        """Parse APPLICATION_ADMIN_TELEGRAM_IDS string into list of integers."""
+        if not self.application_admin_telegram_ids:
+            return []
+        try:
+            return [
+                int(id_str.strip())
+                for id_str in self.application_admin_telegram_ids.split(",")
+                if id_str.strip()
+            ]
+        except ValueError:
+            return []
 
 
 @lru_cache
