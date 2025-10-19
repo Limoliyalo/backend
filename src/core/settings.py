@@ -122,7 +122,11 @@ class Settings(BaseSettings):
         if not self.application_admin_telegram_ids:
             return []
         try:
-            return [int(id_str.strip()) for id_str in self.application_admin_telegram_ids.split(",") if id_str.strip()]
+            return [
+                int(id_str.strip())
+                for id_str in self.application_admin_telegram_ids.split(",")
+                if id_str.strip()
+            ]
         except ValueError:
             return []
 
