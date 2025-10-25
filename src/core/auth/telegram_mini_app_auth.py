@@ -22,7 +22,7 @@ class TelegramMiniAppAuth:
     def validate_init_data(self, init_data_raw: str) -> TelegramAuthData:
         try:
             init_data = InitData.parse(init_data_raw)
-            init_data.validate(self.bot_token)
+            init_data.validate(self.bot_token, lifetime=86400)
 
             # ---------- USER ----------
             user_obj = getattr(init_data, "user", None)

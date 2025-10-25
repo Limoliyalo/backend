@@ -80,6 +80,11 @@ from src.use_cases.user_settings.manage_settings import (
     GetUserSettingsUseCase,
     ListUserSettingsUseCase,
     UpsertUserSettingsUseCase,
+    PatchUserSettingsUseCase,
+    ResetQuietStartTimeUseCase,
+    ResetQuietEndTimeUseCase,
+    UpdateMutedDaysUseCase,
+    UpdateDoNotDisturbUseCase,
 )
 from src.use_cases.activity_types.manage_activity_types import (
     CreateActivityTypeUseCase,
@@ -392,8 +397,23 @@ class ApplicationContainer(containers.DeclarativeContainer):
     upsert_user_settings_use_case = providers.Factory(
         UpsertUserSettingsUseCase, settings_repository=user_settings_repository
     )
+    patch_user_settings_use_case = providers.Factory(
+        PatchUserSettingsUseCase, settings_repository=user_settings_repository
+    )
     delete_user_settings_use_case = providers.Factory(
         DeleteUserSettingsUseCase, settings_repository=user_settings_repository
+    )
+    reset_quiet_start_time_use_case = providers.Factory(
+        ResetQuietStartTimeUseCase, settings_repository=user_settings_repository
+    )
+    reset_quiet_end_time_use_case = providers.Factory(
+        ResetQuietEndTimeUseCase, settings_repository=user_settings_repository
+    )
+    update_muted_days_use_case = providers.Factory(
+        UpdateMutedDaysUseCase, settings_repository=user_settings_repository
+    )
+    update_do_not_disturb_use_case = providers.Factory(
+        UpdateDoNotDisturbUseCase, settings_repository=user_settings_repository
     )
 
     create_activity_type_use_case = providers.Factory(
@@ -419,6 +439,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     create_daily_activity_use_case = providers.Factory(
         CreateDailyActivityUseCase,
         daily_activities_repository=daily_activities_repository,
+        activity_types_repository=activity_types_repository,
     )
     list_daily_activities_for_day_use_case = providers.Factory(
         ListDailyActivitiesForDayUseCase,
@@ -431,6 +452,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     update_daily_activity_use_case = providers.Factory(
         UpdateDailyActivityUseCase,
         daily_activities_repository=daily_activities_repository,
+        activity_types_repository=activity_types_repository,
     )
     delete_daily_activity_use_case = providers.Factory(
         DeleteDailyActivityUseCase,

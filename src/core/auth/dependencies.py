@@ -1,7 +1,5 @@
 """FastAPI dependencies for authentication."""
 
-from typing import Annotated
-
 from dependency_injector.wiring import Provide, inject
 from fastapi import Depends, Request
 from src.core.auth.providers import TelegramMiniAppAuthProvider

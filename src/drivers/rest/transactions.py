@@ -127,8 +127,12 @@ async def delete_transaction(
 @router.get("/me", response_model=list[TransactionResponse])
 @inject
 async def list_my_transactions(
-    start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
-    end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
+    start_date: datetime | None = Query(
+        None, description="Начальная дата диапазона", example="2025-10-01 00:00:00"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
     transaction_type: str | None = Query(
         None,
         description="Тип транзакции (deposit, withdrawal, purchase_item, purchase_background)",

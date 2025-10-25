@@ -118,7 +118,15 @@ async def register_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.get("/admin", response_model=list[UserResponse], status_code=status.HTTP_200_OK)
+@router.get(
+    "/admin",
+    response_model=list[UserResponse],
+    status_code=status.HTTP_200_OK,
+    responses={
+        401: {"description": "Unauthorized - Invalid admin credentials"},
+        403: {"description": "Forbidden - Admin privileges required"},
+    },
+)
 @inject
 async def list_users(
     _: int = Depends(admin_user_provider),
@@ -429,13 +437,13 @@ async def get_my_statistics(
             purchased_backgrounds = []
             mood_entries = []
 
-        transactions = await transactions_repo.list_for_user(TelegramId(telegram_id))
+        transactions = await transactions_repo.list_for_user(telegram_id)
         friends = await friends_repo.list_for_user(telegram_id)
 
         activities_count = len(mood_entries)
 
         return UserStatisticsResponse(
-            user_id=telegram_id,
+            user_id=telegram_id.value,
             balance=user.balance,
             level=level,
             total_experience=total_experience,

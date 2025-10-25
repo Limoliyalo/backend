@@ -1,9 +1,7 @@
 import logging
 
-from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 
-from src.container import ApplicationContainer
 from src.core.auth.dependencies import (
     get_telegram_auth_data,
     get_telegram_current_user,
@@ -40,8 +38,6 @@ def _map_telegram_auth_data(auth_data: TelegramAuthData) -> TelegramAuthDataResp
         user=_map_telegram_user(auth_data.user),
         auth_date=auth_data.auth_date,
     )
-
-
 
 
 @router.get(

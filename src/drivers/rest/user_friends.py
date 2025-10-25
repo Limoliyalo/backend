@@ -54,7 +54,7 @@ async def list_user_friends(
     ]
 
 
-@router.get("/id/{friend_id}", response_model=UserFriendResponse)
+@router.get("/id/{friend_id}/admin", response_model=UserFriendResponse)
 @inject
 async def get_user_friend(
     friend_id: UUID,
@@ -106,7 +106,7 @@ async def add_friend(
         raise BadRequestException(detail=str(e))
 
 
-@router.patch("/id/{friend_id}", response_model=UserFriendResponse)
+@router.patch("/id/{friend_id}/admin", response_model=UserFriendResponse)
 @inject
 async def update_user_friend(
     friend_id: UUID,
@@ -161,7 +161,7 @@ async def list_my_friends(
     ),
 ):
     """Получить список своих друзей"""
-    
+
     friends = await use_case.execute(telegram_id.value)
     return [
         UserFriendResponse(
@@ -186,7 +186,7 @@ async def add_my_friend(
     ),
 ):
     """Добавить друга"""
-    
+
     try:
         input_data = AddFriendInput(
             owner_tg_id=telegram_id.value, friend_tg_id=data.friend_tg_id
@@ -212,7 +212,7 @@ async def remove_my_friend(
     ),
 ):
     """Удалить друга из своего списка"""
-    
+
     try:
         await use_case.execute(telegram_id.value, friend_tg_id)
     except RepositoryError as e:

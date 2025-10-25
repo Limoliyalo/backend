@@ -22,6 +22,10 @@ class CharacterBackgroundPurchase(BaseModel):
     )
 
 
+class CharacterBackgroundUserPurchase(BaseModel):
+    background_id: UUID = Field(..., description="Background ID")
+
+
 class CharacterBackgroundUpdate(BaseModel):
     is_active: bool | None = None
     is_favorite: bool | None = None

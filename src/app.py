@@ -72,7 +72,35 @@ def create_app() -> FastAPI:
                 "bearerFormat": "Telegram Init Data",
                 "description": "Telegram Mini App Init Data. Формат: <init_data>",
             },
+            "AdminBasicAuth": {
+                "type": "http",
+                "scheme": "basic",
+                "description": "Admin Basic Authentication. Username: telegram_id, Password: user password",
+            },
         }
+
+        # Add security requirements to specific paths
+        public_endpoints = ["/register", "/catalog"]
+
+        for path, path_item in openapi_schema["paths"].items():
+            for _, operation in path_item.items():
+                if isinstance(operation, dict) and "operationId" in operation:
+                    # Check if this is a public endpoint (no auth required)
+                    is_public = any(
+                        public_endpoint in path for public_endpoint in public_endpoints
+                    )
+
+                    if is_public:
+                        # Public endpoints - no security required
+                        continue
+                    elif "/admin" in path or "admin" in operation.get(
+                        "operationId", ""
+                    ):
+                        # Admin endpoints use Basic Auth
+                        operation["security"] = [{"AdminBasicAuth": []}]
+                    else:
+                        # Regular endpoints use Telegram auth
+                        operation["security"] = [{"TelegramMiniAppAuth": []}]
 
         app.openapi_schema = openapi_schema
         return app.openapi_schema

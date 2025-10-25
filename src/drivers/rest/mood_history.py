@@ -136,17 +136,18 @@ async def delete_mood_history(
 
 @router.get("/me", response_model=list[MoodHistoryResponse])
 @inject
-async def list_my_mood_history(
-    limit: int = Query(
-        100,
-        ge=1,
-        le=500,
-        description="Limit (используется только если не указаны даты)",
+async def get_my_mood_history(
+    day: datetime | None = Query(
+        None,
+        description="День для получения истории настроения",
+        example="2025-10-25 00:00:00",
     ),
     start_date: datetime | None = Query(
-        None, description="Начальная дата (включительно)"
+        None, description="Начальная дата диапазона", example="2025-10-01 00:00:00"
     ),
-    end_date: datetime | None = Query(None, description="Конечная дата (включительно)"),
+    end_date: datetime | None = Query(
+        None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
     telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
@@ -158,22 +159,38 @@ async def list_my_mood_history(
         Provide[ApplicationContainer.mood_history_repository]
     ),
 ):
-    """Получить историю настроения текущего пользователя
+    """Получить историю настроения за день или диапазон дат"""
 
-    Можно фильтровать по диапазону дат или использовать limit.
-    Если указаны start_date и end_date, limit игнорируется.
-    """
-    
+    # Валидация параметров
+    if day is not None and (start_date is not None or end_date is not None):
+        raise BadRequestException("Нельзя указывать day вместе с start_date/end_date")
+
+    if start_date is not None and end_date is None:
+        raise BadRequestException(
+            "Если указана start_date, то end_date тоже обязательна"
+        )
+
+    if end_date is not None and start_date is None:
+        raise BadRequestException(
+            "Если указана end_date, то start_date тоже обязательна"
+        )
+
+    if day is None and start_date is None and end_date is None:
+        raise BadRequestException(
+            "Необходимо указать либо day, либо start_date и end_date"
+        )
+
     try:
-
         character = await get_character_use_case.execute(telegram_id.value)
 
-        if start_date and end_date:
+        if day is not None:
+            # Получаем историю настроения за конкретный день
+            mood_history = await mood_repo.list_for_date_range(character.id, day, day)
+        else:
+            # Получаем историю настроения за диапазон дат
             mood_history = await mood_repo.list_for_date_range(
                 character.id, start_date, end_date
             )
-        else:
-            mood_history = await use_case.execute(character.id, limit=limit)
 
         return [MoodHistoryResponse.model_validate(mh) for mh in mood_history]
     except EntityNotFoundException as e:
@@ -196,9 +213,8 @@ async def create_my_mood_entry(
     ),
 ):
     """Создать запись о настроении для текущего пользователя"""
-    
-    try:
 
+    try:
         character = await get_character_use_case.execute(telegram_id.value)
 
         input_data = CreateMoodHistoryInput(

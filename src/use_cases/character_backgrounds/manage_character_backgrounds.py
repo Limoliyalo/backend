@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from src.domain.entities.healthity.characters import CharacterBackground
 from src.domain.entities.healthity.transactions import Transaction
@@ -228,7 +229,7 @@ class PurchaseBackgroundWithBalanceUseCase:
         self, data: PurchaseBackgroundWithBalanceInput
     ) -> CharacterBackground:
 
-        background = await self._backgrounds_repository.get_by_id(data.background_id)
+        background = await self._backgrounds_repository.get(data.background_id)
         if background is None:
             raise EntityNotFoundException(f"Background {data.background_id} not found")
 
@@ -257,6 +258,7 @@ class PurchaseBackgroundWithBalanceUseCase:
             background_id=data.background_id,
             is_active=False,
             is_favorite=False,
+            purchased_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         created_background = await self._character_backgrounds_repository.add(
             character_background
@@ -268,7 +270,7 @@ class PurchaseBackgroundWithBalanceUseCase:
             amount=-background.cost,
             balance_after=updated_user.balance,
             type="purchase_background",
-            related_item_id=data.background_id,
+            related_background_id=data.background_id,
             description=f"Покупка фона: {background.name}",
         )
         await self._transactions_repository.add(transaction)

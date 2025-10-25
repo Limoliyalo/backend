@@ -129,7 +129,7 @@ async def delete_character_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/equip", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/equip", response_model=CharacterItemResponse)
 @inject
 async def equip_my_item(
     character_item_id: UUID,
@@ -145,7 +145,7 @@ async def equip_my_item(
     ),
 ):
     """Активировать предмет"""
-    
+
     try:
         character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
@@ -159,7 +159,7 @@ async def equip_my_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/unequip", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/unequip", response_model=CharacterItemResponse)
 @inject
 async def unequip_my_item(
     character_item_id: UUID,
@@ -175,7 +175,7 @@ async def unequip_my_item(
     ),
 ):
     """Деактивировать предмет"""
-    
+
     try:
         character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
@@ -189,7 +189,7 @@ async def unequip_my_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/favourite", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/favourite", response_model=CharacterItemResponse)
 @inject
 async def toggle_favourite_item(
     character_item_id: UUID,
@@ -205,7 +205,7 @@ async def toggle_favourite_item(
     ),
 ):
     """Добавить/убрать предмет из избранного"""
-    
+
     try:
         character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
@@ -231,7 +231,7 @@ async def list_my_items(
     ),
 ):
     """Получить список купленных предметов текущего пользователя"""
-    
+
     try:
         character = await get_character_use_case.execute(telegram_id.value)
         items = await use_case.execute(character.id)
@@ -241,7 +241,7 @@ async def list_my_items(
 
 
 @router.post(
-    "/purchase",
+    "/me/purchase",
     response_model=CharacterItemResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -257,7 +257,7 @@ async def purchase_item(
     ),
 ):
     """Купить предмет (списываются монетки с баланса)"""
-    
+
     try:
         character = await get_character_use_case.execute(telegram_id.value)
 

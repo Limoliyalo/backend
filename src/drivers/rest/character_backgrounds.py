@@ -14,6 +14,7 @@ from src.drivers.rest.schemas.character_backgrounds import (
     CharacterBackgroundPurchase,
     CharacterBackgroundResponse,
     CharacterBackgroundUpdate,
+    CharacterBackgroundUserPurchase,
 )
 from src.use_cases.character_backgrounds.manage_character_backgrounds import (
     EquipBackgroundUseCase,
@@ -204,7 +205,7 @@ async def toggle_favorite_background(
         raise BadRequestException(f"Database error: {str(e)}")
 
 
-@router.get("/", response_model=list[CharacterBackgroundResponse])
+@router.get("/me", response_model=list[CharacterBackgroundResponse])
 @inject
 async def list_user_character_backgrounds(
     telegram_id: TelegramId = Depends(get_telegram_current_user),
@@ -229,7 +230,7 @@ async def list_user_character_backgrounds(
         raise BadRequestException(f"Database error: {str(e)}")
 
 
-@router.get("/{background_id}", response_model=CharacterBackgroundResponse)
+@router.get("/me/{background_id}", response_model=CharacterBackgroundResponse)
 @inject
 async def get_user_character_background(
     background_id: UUID,
@@ -245,14 +246,14 @@ async def get_user_character_background(
     try:
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id.value)
-        
+
         # Затем получаем фон и проверяем, что он принадлежит этому персонажу
         background = await use_case.execute(background_id)
-        
+
         # Проверяем, что фон принадлежит персонажу пользователя
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
-            
+
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
@@ -261,13 +262,13 @@ async def get_user_character_background(
 
 
 @router.post(
-    "/purchase",
+    "/me/purchase",
     response_model=CharacterBackgroundResponse,
     status_code=status.HTTP_201_CREATED,
 )
 @inject
 async def purchase_background(
-    background_data: CharacterBackgroundPurchase,
+    background_data: CharacterBackgroundUserPurchase,
     telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: PurchaseBackgroundWithBalanceUseCase = Depends(
         Provide[ApplicationContainer.purchase_background_with_balance_use_case]
@@ -294,7 +295,7 @@ async def purchase_background(
         raise BadRequestException(f"Database error: {str(e)}")
 
 
-@router.put("/{background_id}", response_model=CharacterBackgroundResponse)
+@router.put("/me/{background_id}", response_model=CharacterBackgroundResponse)
 @inject
 async def update_user_character_background(
     background_id: UUID,
@@ -314,12 +315,12 @@ async def update_user_character_background(
     try:
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id.value)
-        
+
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
-        
+
         input_data = UpdateCharacterBackgroundInput(
             character_background_id=background_id,
             is_active=background_data.is_active,
@@ -333,7 +334,7 @@ async def update_user_character_background(
         raise BadRequestException(f"Database error: {str(e)}")
 
 
-@router.post("/{background_id}/equip", response_model=CharacterBackgroundResponse)
+@router.post("/me/{background_id}/equip", response_model=CharacterBackgroundResponse)
 @inject
 async def equip_user_background(
     background_id: UUID,
@@ -352,12 +353,12 @@ async def equip_user_background(
     try:
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id.value)
-        
+
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
-        
+
         background = await use_case.execute(background_id)
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
@@ -366,7 +367,7 @@ async def equip_user_background(
         raise BadRequestException(f"Database error: {str(e)}")
 
 
-@router.post("/{background_id}/unequip", response_model=CharacterBackgroundResponse)
+@router.post("/me/{background_id}/unequip", response_model=CharacterBackgroundResponse)
 @inject
 async def unequip_user_background(
     background_id: UUID,
@@ -385,12 +386,12 @@ async def unequip_user_background(
     try:
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id.value)
-        
+
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
-        
+
         background = await use_case.execute(background_id)
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
@@ -400,7 +401,7 @@ async def unequip_user_background(
 
 
 @router.post(
-    "/{background_id}/toggle-favorite", response_model=CharacterBackgroundResponse
+    "/me/{background_id}/toggle-favorite", response_model=CharacterBackgroundResponse
 )
 @inject
 async def toggle_favorite_user_background(
@@ -420,12 +421,12 @@ async def toggle_favorite_user_background(
     try:
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id.value)
-        
+
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
-        
+
         background = await use_case.execute(background_id)
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:

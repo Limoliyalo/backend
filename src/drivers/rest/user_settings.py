@@ -14,8 +14,7 @@ from src.drivers.rest.schemas.user_settings import (
 from src.use_cases.user_settings.manage_settings import (
     DeleteUserSettingsUseCase,
     GetUserSettingsUseCase,
-    UpdateUserSettingsInput,
-    UpsertUserSettingsUseCase,
+    PatchUserSettingsUseCase,
 )
 
 router = APIRouter(prefix="/user-settings", tags=["User Settings"])
@@ -39,23 +38,17 @@ async def get_my_settings(
         raise NotFoundException(detail=str(e))
 
 
-@router.put("/me", response_model=UserSettingsResponse)
+@router.patch("/me", response_model=UserSettingsResponse)
 @inject
 async def update_my_settings(
     data: UserSettingsUpdate,
     telegram_id: TelegramId = Depends(get_telegram_current_user),
-    use_case: UpsertUserSettingsUseCase = Depends(
-        Provide[ApplicationContainer.upsert_user_settings_use_case]
+    use_case: PatchUserSettingsUseCase = Depends(
+        Provide[ApplicationContainer.patch_user_settings_use_case]
     ),
 ):
-    """Создать или обновить настройки текущего пользователя"""
-    input_data = UpdateUserSettingsInput(
-        user_tg_id=telegram_id.value,
-        quiet_start_time=data.quiet_start_time,
-        quiet_end_time=data.quiet_end_time,
-        muted_days=data.muted_days,
-        do_not_disturb=data.do_not_disturb,
-    )
+    """Обновить настройки текущего пользователя"""
+    input_data = data.to_patch_input(telegram_id.value)
     try:
         settings = await use_case.execute(input_data)
         return UserSettingsResponse.model_validate(settings)

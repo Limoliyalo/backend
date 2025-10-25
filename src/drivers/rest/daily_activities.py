@@ -32,14 +32,16 @@ router = APIRouter(prefix="/daily-activities", tags=["Daily Activities"])
 
 
 @router.get(
-    "/character/{character_id}",
+    "/character/{character_id}/admin",
     response_model=list[DailyActivityResponse],
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def list_daily_activities_for_day(
     character_id: UUID,
-    day: datetime = Query(..., description="День для получения активностей"),
+    day: datetime = Query(
+        ..., description="День для получения активностей", example="2025-10-25 00:00:00"
+    ),
     _: int = Depends(admin_user_provider),
     use_case: ListDailyActivitiesForDayUseCase = Depends(
         Provide[ApplicationContainer.list_daily_activities_for_day_use_case]
@@ -151,9 +153,14 @@ async def list_my_daily_activities(
     day: datetime | None = Query(
         None,
         description="День для получения активностей (используется если не указан диапазон)",
+        example="2025-10-25 00:00:00",
     ),
-    start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
-    end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
+    start_date: datetime | None = Query(
+        None, description="Начальная дата диапазона", example="2025-10-01 00:00:00"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
     telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
@@ -166,7 +173,7 @@ async def list_my_daily_activities(
     ),
 ):
     """Получить активности текущего пользователя за день или диапазон дат"""
-    
+
     try:
 
         character = await get_character_use_case.execute(telegram_id.value)
@@ -193,9 +200,15 @@ async def list_my_daily_activities(
 @inject
 async def create_my_daily_activity(
     activity_type_id: UUID = Query(..., description="ID типа активности"),
-    date: datetime = Query(..., description="Дата активности"),
+    date: datetime = Query(
+        ..., description="Дата активности", example="2025-10-25 16:35:24"
+    ),
     value: int = Query(0, ge=0, description="Значение активности"),
-    goal: int = Query(1, ge=1, description="Цель активности"),
+    goal: int | None = Query(
+        None,
+        ge=1,
+        description="Цель активности (если не указана, будет использована цель из типа активности)",
+    ),
     notes: str | None = Query(None, description="Заметки"),
     telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
@@ -206,7 +219,7 @@ async def create_my_daily_activity(
     ),
 ):
     """Создать активность для текущего пользователя"""
-    
+
     try:
 
         character = await get_character_use_case.execute(telegram_id.value)
@@ -244,7 +257,7 @@ async def update_my_daily_activity(
     ),
 ):
     """Обновить активность текущего пользователя"""
-    
+
     try:
 
         character = await get_character_use_case.execute(telegram_id.value)
