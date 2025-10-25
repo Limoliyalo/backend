@@ -37,10 +37,43 @@ class UserSettingsCreate(UserSettingsBase):
 
 
 class UserSettingsUpdate(BaseModel):
-    quiet_start_time: time | None = None
-    quiet_end_time: time | None = None
-    muted_days: list[str] | None = None
-    do_not_disturb: bool | None = None
+    quiet_start_time: time | None = Field(
+        default=None,
+        description="Время начала тихого режима. null = сбросить, не передавать = не изменять",
+    )
+    quiet_end_time: time | None = Field(
+        default=None,
+        description="Время окончания тихого режима. null = сбросить, не передавать = не изменять",
+    )
+    muted_days: list[str] | None = Field(
+        default=None,
+        description="Дни для отключения уведомлений. null = сбросить, не передавать = не изменять",
+    )
+    do_not_disturb: bool | None = Field(
+        default=None,
+        description="Режим 'Не беспокоить'. null = сбросить, не передавать = не изменять",
+    )
+
+    def to_patch_input(self, user_tg_id: int):
+        """Преобразует в PatchUserSettingsInput с флагами переданных полей"""
+        from src.use_cases.user_settings.manage_settings import PatchUserSettingsInput
+
+        # Определяем, какие поля были переданы в JSON
+        provided_fields = set()
+        if hasattr(self, "__fields_set__"):
+            provided_fields = self.__fields_set__
+
+        return PatchUserSettingsInput(
+            user_tg_id=user_tg_id,
+            quiet_start_time=self.quiet_start_time,
+            quiet_end_time=self.quiet_end_time,
+            muted_days=self.muted_days,
+            do_not_disturb=self.do_not_disturb,
+            _quiet_start_time_provided="quiet_start_time" in provided_fields,
+            _quiet_end_time_provided="quiet_end_time" in provided_fields,
+            _muted_days_provided="muted_days" in provided_fields,
+            _do_not_disturb_provided="do_not_disturb" in provided_fields,
+        )
 
     @field_validator("muted_days")
     @classmethod
@@ -78,3 +111,30 @@ class UserSettingsResponse(UserSettingsBase):
         if isinstance(v, TelegramId):
             return v.value
         return v
+
+
+class MutedDaysUpdate(BaseModel):
+    muted_days: list[str] = Field(..., description="List of muted days")
+
+    @field_validator("muted_days")
+    @classmethod
+    def validate_muted_days(cls, v: list[str]) -> list[str]:
+        valid_days = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ]
+        for day in v:
+            if day.lower() not in valid_days:
+                raise ValueError(
+                    f"Invalid day: {day}. Must be one of: {', '.join(valid_days)}"
+                )
+        return v
+
+
+class DoNotDisturbUpdate(BaseModel):
+    do_not_disturb: bool = Field(..., description="Do not disturb setting")

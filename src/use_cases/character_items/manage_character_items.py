@@ -164,24 +164,35 @@ class PurchaseItemWithBalanceUseCase:
 
     async def execute(self, data: PurchaseItemWithBalanceInput) -> CharacterItem:
 
-        item = await self._items_repository.get_by_id(data.item_id)
+        # Получаем предмет
+        item = await self._items_repository.get(data.item_id)
         if item is None:
             raise EntityNotFoundException(f"Item {data.item_id} not found")
 
         if not item.is_available:
             raise ValueError("Item is not available for purchase")
 
+        # Проверяем, что предмет еще не куплен
         existing_items = await self._character_items_repository.list_for_character(
             data.character_id
         )
         if any(ci.item_id == data.item_id for ci in existing_items):
             raise ValueError("Item already purchased")
 
-        telegram_id = TelegramId(data.user_tg_id)
-        user = await self._users_repository.get_by_telegram_id(telegram_id)
+        # Получаем пользователя и проверяем баланс
+        user = await self._users_repository.get_by_telegram_id(
+            TelegramId(data.user_tg_id)
+        )
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
+        # Проверяем достаточность средств
+        if user.balance < item.cost:
+            raise ValueError(
+                f"Insufficient funds. Required: {item.cost}, Available: {user.balance}"
+            )
+
+        # Списываем деньги с баланса пользователя
         user.withdraw(item.cost)
         updated_user = await self._users_repository.update(user)
 
@@ -196,7 +207,7 @@ class PurchaseItemWithBalanceUseCase:
 
         transaction = Transaction(
             id=uuid.uuid4(),
-            user_tg_id=telegram_id,
+            user_tg_id=TelegramId(data.user_tg_id),
             amount=-item.cost,
             balance_after=updated_user.balance,
             type="purchase_item",

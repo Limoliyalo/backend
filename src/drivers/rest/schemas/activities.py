@@ -39,7 +39,7 @@ class ActivityTypeResponse(ActivityTypeBase):
 class DailyActivityBase(BaseModel):
     date: datetime
     value: int = Field(default=0, ge=0, description="Value must be non-negative")
-    goal: int = Field(default=1, ge=1, description="Goal must be at least 1")
+    goal: int | None = Field(None, ge=1, description="Goal must be at least 1")
     notes: str | None = Field(None, max_length=255, description="Notes")
 
 

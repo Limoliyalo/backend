@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
@@ -129,11 +129,11 @@ async def delete_character_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/equip", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/equip", response_model=CharacterItemResponse)
 @inject
 async def equip_my_item(
     character_item_id: UUID,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -145,9 +145,9 @@ async def equip_my_item(
     ),
 ):
     """Активировать предмет"""
-    telegram_id = int(payload.sub)
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -159,11 +159,11 @@ async def equip_my_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/unequip", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/unequip", response_model=CharacterItemResponse)
 @inject
 async def unequip_my_item(
     character_item_id: UUID,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -175,9 +175,9 @@ async def unequip_my_item(
     ),
 ):
     """Деактивировать предмет"""
-    telegram_id = int(payload.sub)
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -189,11 +189,11 @@ async def unequip_my_item(
         raise NotFoundException(detail=str(e))
 
 
-@router.patch("/{character_item_id}/favourite", response_model=CharacterItemResponse)
+@router.patch("/me/{character_item_id}/favourite", response_model=CharacterItemResponse)
 @inject
 async def toggle_favourite_item(
     character_item_id: UUID,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -205,9 +205,9 @@ async def toggle_favourite_item(
     ),
 ):
     """Добавить/убрать предмет из избранного"""
-    telegram_id = int(payload.sub)
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -222,7 +222,7 @@ async def toggle_favourite_item(
 @router.get("/me", response_model=list[CharacterItemResponse])
 @inject
 async def list_my_items(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -231,9 +231,9 @@ async def list_my_items(
     ),
 ):
     """Получить список купленных предметов текущего пользователя"""
-    telegram_id = int(payload.sub)
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
         items = await use_case.execute(character.id)
         return [CharacterItemResponse.model_validate(item) for item in items]
     except EntityNotFoundException as e:
@@ -241,14 +241,14 @@ async def list_my_items(
 
 
 @router.post(
-    "/purchase",
+    "/me/purchase",
     response_model=CharacterItemResponse,
     status_code=status.HTTP_201_CREATED,
 )
 @inject
 async def purchase_item(
     item_id: UUID = Query(..., description="ID предмета для покупки"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -257,12 +257,12 @@ async def purchase_item(
     ),
 ):
     """Купить предмет (списываются монетки с баланса)"""
-    telegram_id = int(payload.sub)
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         input_data = PurchaseItemWithBalanceInput(
-            user_tg_id=telegram_id,
+            user_tg_id=telegram_id.value,
             character_id=character.id,
             item_id=item_id,
         )

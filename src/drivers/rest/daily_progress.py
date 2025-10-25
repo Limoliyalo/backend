@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
@@ -16,7 +16,6 @@ from src.drivers.rest.schemas.activities import (
     DailyProgressResponse,
     DailyProgressUpdate,
 )
-from src.ports.repositories.healthity.activities import DailyProgressRepository
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
     CreateDailyProgressInput,
@@ -34,7 +33,7 @@ router = APIRouter(prefix="/daily-progress", tags=["Daily Progress"])
 
 
 @router.get(
-    "/character/{character_id}",
+    "/character/{character_id}/admin",
     response_model=list[DailyProgressResponse],
     status_code=status.HTTP_200_OK,
 )
@@ -55,14 +54,16 @@ async def list_daily_progress_for_character(
 
 
 @router.get(
-    "/character/{character_id}/day",
+    "/character/{character_id}/day/admin",
     response_model=DailyProgressResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def get_daily_progress_for_day(
     character_id: UUID,
-    day: datetime = Query(..., description="День для получения прогресса"),
+    day: datetime = Query(
+        ..., description="День для получения прогресса", example="2025-10-25 00:00:00"
+    ),
     _: int = Depends(admin_user_provider),
     use_case: GetDailyProgressForDayUseCase = Depends(
         Provide[ApplicationContainer.get_daily_progress_for_day_use_case]
@@ -77,15 +78,19 @@ async def get_daily_progress_for_day(
 
 
 @router.get(
-    "/character/{character_id}/date-range",
+    "/character/{character_id}/date-range/admin",
     response_model=list[DailyProgressResponse],
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def get_daily_progress_for_date_range(
     character_id: UUID,
-    start_date: datetime = Query(..., description="Начальная дата диапазона"),
-    end_date: datetime = Query(..., description="Конечная дата диапазона"),
+    start_date: datetime = Query(
+        ..., description="Начальная дата диапазона", example="2025-10-01 00:00:00"
+    ),
+    end_date: datetime = Query(
+        ..., description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
     _: int = Depends(admin_user_provider),
     use_case: ListDailyProgressForDateRangeUseCase = Depends(
         Provide[ApplicationContainer.list_daily_progress_for_date_range_use_case]
@@ -181,60 +186,107 @@ async def delete_daily_progress(
 
 @router.get("/me", response_model=list[DailyProgressResponse])
 @inject
-async def list_my_daily_progress(
-    limit: int = Query(
-        30,
-        ge=1,
-        le=365,
-        description="Количество дней (используется если не указан диапазон)",
+async def get_my_progress(
+    day: datetime | None = Query(
+        None, description="День для получения прогресса", example="2025-10-25 00:00:00"
     ),
-    start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
-    end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    start_date: datetime | None = Query(
+        None, description="Начальная дата диапазона", example="2025-10-01 00:00:00"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
-    use_case: ListDailyProgressForCharacterUseCase = Depends(
-        Provide[ApplicationContainer.list_daily_progress_for_character_use_case]
+    get_day_use_case: GetDailyProgressForDayUseCase = Depends(
+        Provide[ApplicationContainer.get_daily_progress_for_day_use_case]
     ),
-    progress_repo: DailyProgressRepository = Depends(
-        Provide[ApplicationContainer.daily_progress_repository]
+    list_range_use_case: ListDailyProgressForDateRangeUseCase = Depends(
+        Provide[ApplicationContainer.list_daily_progress_for_date_range_use_case]
     ),
 ):
-    """Получить дневной прогресс своего персонажа за период или с limit"""
-    telegram_id = int(payload.sub)
-    try:
-        character = await get_character_use_case.execute(telegram_id)
+    """Получить прогресс своего персонажа за день или диапазон дат"""
 
-        if start_date and end_date:
-            progress_list = await progress_repo.list_for_date_range(
+    # Валидация параметров
+    if day is not None and (start_date is not None or end_date is not None):
+        raise BadRequestException("Нельзя указывать day вместе с start_date/end_date")
+
+    if start_date is not None and end_date is None:
+        raise BadRequestException(
+            "Если указана start_date, то end_date тоже обязательна"
+        )
+
+    if end_date is not None and start_date is None:
+        raise BadRequestException(
+            "Если указана end_date, то start_date тоже обязательна"
+        )
+
+    if day is None and start_date is None and end_date is None:
+        raise BadRequestException(
+            "Необходимо указать либо day, либо start_date и end_date"
+        )
+
+    try:
+        character = await get_character_use_case.execute(telegram_id.value)
+
+        if day is not None:
+            # Получаем прогресс за конкретный день
+            progress = await get_day_use_case.execute(character.id, day)
+            return [DailyProgressResponse.model_validate(progress)] if progress else []
+        else:
+            # Получаем прогресс за диапазон дат
+            progress_list = await list_range_use_case.execute(
                 character.id, start_date, end_date
             )
-        else:
-            progress_list = await use_case.execute(character.id, limit=limit)
+            return [
+                DailyProgressResponse.model_validate(progress)
+                for progress in progress_list
+            ]
 
-        return [DailyProgressResponse.model_validate(p) for p in progress_list]
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
 
-@router.get("/me/day", response_model=DailyProgressResponse)
+@router.post(
+    "/me", response_model=DailyProgressResponse, status_code=status.HTTP_201_CREATED
+)
 @inject
-async def get_my_daily_progress_for_day(
-    day: datetime = Query(..., description="День для получения прогресса"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+async def create_or_update_daily_progress(
+    date: datetime = Query(
+        ..., description="Дата прогресса", example="2025-10-25 00:00:00"
+    ),
+    experience_gained: int = Query(0, ge=0, description="Полученный опыт"),
+    mood_average: str | None = Query(
+        None, description="Среднее настроение (neutral, happy, sad, angry, bored)"
+    ),
+    behavior_index: int | None = Query(
+        None, ge=0, le=100, description="Индекс поведения (0-100)"
+    ),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
-    use_case: GetDailyProgressForDayUseCase = Depends(
-        Provide[ApplicationContainer.get_daily_progress_for_day_use_case]
+    use_case: CreateDailyProgressUseCase = Depends(
+        Provide[ApplicationContainer.create_daily_progress_use_case]
     ),
 ):
-    """Получить прогресс своего персонажа за конкретный день"""
-    telegram_id = int(payload.sub)
+    """Создать или обновить дневной прогресс для текущего пользователя"""
+
     try:
-        character = await get_character_use_case.execute(telegram_id)
-        progress = await use_case.execute(character.id, day)
+        character = await get_character_use_case.execute(telegram_id.value)
+
+        input_data = CreateDailyProgressInput(
+            character_id=character.id,
+            date=date,
+            experience_gained=experience_gained,
+            mood_average=mood_average,
+            behavior_index=behavior_index,
+        )
+        progress = await use_case.execute(input_data)
         return DailyProgressResponse.model_validate(progress)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))

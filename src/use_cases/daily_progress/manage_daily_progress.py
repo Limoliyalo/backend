@@ -74,8 +74,13 @@ class CreateDailyProgressUseCase:
 
             existing_progress.experience_gained += data.experience_gained
             existing_progress.level_at_end = character.level
-            existing_progress.mood_average = data.mood_average
-            existing_progress.behavior_index = data.behavior_index
+
+            # Обновляем только не-None значения
+            if data.mood_average is not None:
+                existing_progress.mood_average = data.mood_average
+            if data.behavior_index is not None:
+                existing_progress.behavior_index = data.behavior_index
+
             existing_progress.touch()
 
             if (

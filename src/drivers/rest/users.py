@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
 from src.domain.value_objects.telegram_id import TelegramId
 from src.adapters.repositories.exceptions import RepositoryError, DuplicateEntityError
@@ -119,7 +118,15 @@ async def register_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.get("/admin", response_model=list[UserResponse], status_code=status.HTTP_200_OK)
+@router.get(
+    "/admin",
+    response_model=list[UserResponse],
+    status_code=status.HTTP_200_OK,
+    responses={
+        401: {"description": "Unauthorized - Invalid admin credentials"},
+        403: {"description": "Forbidden - Admin privileges required"},
+    },
+)
 @inject
 async def list_users(
     _: int = Depends(admin_user_provider),
@@ -149,7 +156,7 @@ async def get_user(
     )
 
     try:
-        user = await use_case.execute(telegram_id)
+        user = await use_case.execute(telegram_id.value)
         response = UserResponse.model_validate(user)
 
         logger.info(
@@ -246,7 +253,7 @@ async def update_user(
     """Обновить пользователя (требуется админ-доступ)"""
     try:
         input_data = UpdateUserInput(
-            telegram_id=telegram_id,
+            telegram_id=telegram_id.value,
             password=data.password,
             is_active=data.is_active,
             balance=data.balance,
@@ -270,7 +277,7 @@ async def delete_user(
 ):
     """Удалить пользователя (требуется админ-доступ)"""
     try:
-        await use_case.execute(telegram_id)
+        await use_case.execute(telegram_id.value)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -278,13 +285,12 @@ async def delete_user(
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
 @inject
 async def get_current_user(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: GetUserUseCase = Depends(Provide[ApplicationContainer.get_user_use_case]),
 ):
     """Получить информацию о текущем пользователе"""
-    telegram_id = int(payload.sub)
     try:
-        user = await use_case.execute(telegram_id)
+        user = await use_case.execute(telegram_id.value)
         return UserResponse.model_validate(user)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
@@ -296,14 +302,13 @@ async def get_current_user(
 @inject
 async def deposit(
     data: DepositRequest,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: DepositUseCase = Depends(Provide[ApplicationContainer.deposit_use_case]),
 ):
     """Пополнить баланс текущего пользователя"""
-    telegram_id = int(payload.sub)
     try:
         input_data = DepositInput(
-            telegram_id=telegram_id,
+            telegram_id=telegram_id.value,
             amount=data.amount,
             description=None,
         )
@@ -325,16 +330,15 @@ async def deposit(
 @inject
 async def withdraw(
     data: WithdrawRequest,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: WithdrawUseCase = Depends(
         Provide[ApplicationContainer.withdraw_use_case]
     ),
 ):
     """Списать средства с баланса текущего пользователя"""
-    telegram_id = int(payload.sub)
     try:
         input_data = WithdrawInput(
-            telegram_id=telegram_id,
+            telegram_id=telegram_id.value,
             amount=data.amount,
             description=None,
         )
@@ -354,16 +358,15 @@ async def withdraw(
 @inject
 async def change_password(
     data: ChangePasswordRequest,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: ChangePasswordUseCase = Depends(
         Provide[ApplicationContainer.change_password_use_case]
     ),
 ):
     """Изменить пароль текущего пользователя"""
-    telegram_id = int(payload.sub)
     try:
         input_data = ChangePasswordInput(
-            telegram_id=telegram_id,
+            telegram_id=telegram_id.value,
             old_password=data.old_password,
             new_password=data.new_password,
         )
@@ -381,7 +384,7 @@ async def change_password(
 )
 @inject
 async def get_my_statistics(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_user_use_case: GetUserUseCase = Depends(
         Provide[ApplicationContainer.get_user_use_case]
     ),
@@ -405,14 +408,12 @@ async def get_my_statistics(
     ),
 ):
     """Получить статистику текущего пользователя"""
-
-    telegram_id = int(payload.sub)
     try:
 
-        user = await get_user_use_case.execute(telegram_id)
+        user = await get_user_use_case.execute(telegram_id.value)
 
         try:
-            character = await get_character_use_case.execute(telegram_id)
+            character = await get_character_use_case.execute(telegram_id.value)
             character_name = character.name
             character_sex = character.sex
             level = character.level
@@ -436,13 +437,13 @@ async def get_my_statistics(
             purchased_backgrounds = []
             mood_entries = []
 
-        transactions = await transactions_repo.list_for_user(TelegramId(telegram_id))
+        transactions = await transactions_repo.list_for_user(telegram_id)
         friends = await friends_repo.list_for_user(telegram_id)
 
         activities_count = len(mood_entries)
 
         return UserStatisticsResponse(
-            user_id=telegram_id,
+            user_id=telegram_id.value,
             balance=user.balance,
             level=level,
             total_experience=total_experience,

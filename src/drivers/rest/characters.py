@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException
+from src.domain.value_objects.telegram_id import TelegramId
 from src.adapters.repositories.exceptions import (
     RepositoryError,
     IntegrityConstraintError,
@@ -150,15 +150,14 @@ async def delete_character(
 @router.get("/me", response_model=CharacterResponse)
 @inject
 async def get_my_character(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
 ):
     """Получить персонажа текущего пользователя"""
-    telegram_id = int(payload.sub)
     try:
-        character = await use_case.execute(telegram_id)
+        character = await use_case.execute(telegram_id.value)
         return CharacterResponse.model_validate(character)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
@@ -170,16 +169,15 @@ async def get_my_character(
 @inject
 async def create_my_character(
     data: CharacterUserCreate,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: CreateCharacterUseCase = Depends(
         Provide[ApplicationContainer.create_character_use_case]
     ),
 ):
     """Создать персонажа для текущего пользователя (только name и sex)"""
-    telegram_id = int(payload.sub)
     try:
         input_data = CreateCharacterInput(
-            user_tg_id=telegram_id,
+            user_tg_id=telegram_id.value,
             name=data.name,
             sex=data.sex,
             current_mood="neutral",
@@ -200,7 +198,7 @@ async def create_my_character(
 @inject
 async def update_my_character(
     data: CharacterUserUpdate,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -209,10 +207,9 @@ async def update_my_character(
     ),
 ):
     """Обновить персонажа текущего пользователя (только name и sex)"""
-    telegram_id = int(payload.sub)
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         input_data = UpdateCharacterInput(
             character_id=character.id,
@@ -229,7 +226,7 @@ async def update_my_character(
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_my_character(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -238,10 +235,9 @@ async def delete_my_character(
     ),
 ):
     """Удалить персонажа текущего пользователя"""
-    telegram_id = int(payload.sub)
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         await delete_use_case.execute(character.id)
     except EntityNotFoundException as e:

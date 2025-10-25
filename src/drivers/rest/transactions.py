@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
@@ -127,13 +127,17 @@ async def delete_transaction(
 @router.get("/me", response_model=list[TransactionResponse])
 @inject
 async def list_my_transactions(
-    start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
-    end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
+    start_date: datetime | None = Query(
+        None, description="Начальная дата диапазона", example="2025-10-01 00:00:00"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
+    ),
     transaction_type: str | None = Query(
         None,
         description="Тип транзакции (deposit, withdrawal, purchase_item, purchase_background)",
     ),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: ListTransactionsForUserUseCase = Depends(
         Provide[ApplicationContainer.list_transactions_for_user_use_case]
     ),
@@ -148,19 +152,15 @@ async def list_my_transactions(
     - Типу транзакции (transaction_type)
     Если фильтры не указаны, возвращаются все транзакции.
     """
-    from src.domain.value_objects.telegram_id import TelegramId
-
-    telegram_id = int(payload.sub)
-
     if start_date and end_date:
         transactions = await transactions_repo.list_for_user_by_date_range(
-            TelegramId(telegram_id), start_date, end_date
+            telegram_id, start_date, end_date
         )
     elif transaction_type:
         transactions = await transactions_repo.list_for_user_by_type(
-            TelegramId(telegram_id), transaction_type
+            telegram_id, transaction_type
         )
     else:
-        transactions = await use_case.execute(telegram_id)
+        transactions = await use_case.execute(telegram_id.value)
 
     return [TransactionResponse.model_validate(t) for t in transactions]
