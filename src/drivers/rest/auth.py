@@ -2,11 +2,18 @@ import logging
 from typing import Any
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Security
+from fastapi.security import HTTPBearer
 
 from src.container import ApplicationContainer
-from src.core.auth.dependencies import get_access_token_payload
+from src.core.auth.dependencies import (
+    get_access_token_payload,
+    get_telegram_auth_data,
+    get_telegram_current_user,
+)
 from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.schemas.tma import TelegramAuthData
+from src.domain.value_objects.telegram_id import TelegramId
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import UnauthorizedException, BadRequestException
 from src.drivers.rest.schemas.auth import (
@@ -14,6 +21,10 @@ from src.drivers.rest.schemas.auth import (
     LoginRequest,
     LogoutRequest,
     RefreshRequest,
+    TelegramAuthDataResponse,
+    TelegramUserResponse,
+    TelegramChatResponse,
+    TelegramChatMemberResponse,
 )
 from src.domain.exceptions import (
     InactiveUserException,
@@ -36,6 +47,13 @@ from src.use_cases.auth import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# Security schemes
+jwt_bearer = HTTPBearer(auto_error=False)
+jwt_security = HTTPBearer(scheme_name="BearerAuth", auto_error=False)
+
+# For Telegram Mini App, we need to use HTTPBearer with custom scheme name
+telegram_security = HTTPBearer(scheme_name="TelegramMiniAppAuth", auto_error=False)
 
 
 def _map_tokens(tokens: AuthTokens) -> AuthTokensResponse:
@@ -68,6 +86,59 @@ def _handle_auth_error(exc: Exception) -> None:
         raise BadRequestException(detail=str(exc)) from exc
 
     raise exc
+
+
+def _map_telegram_user(user) -> TelegramUserResponse | None:
+    """Map TelegramUser to TelegramUserResponse."""
+    if not user:
+        return None
+    return TelegramUserResponse(
+        id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        username=user.username,
+        language_code=user.language_code,
+        is_premium=user.is_premium,
+        photo_url=user.photo_url,
+    )
+
+
+def _map_telegram_chat(chat) -> TelegramChatResponse | None:
+    """Map TelegramChat to TelegramChatResponse."""
+    if not chat:
+        return None
+    return TelegramChatResponse(
+        id=chat.id,
+        type=chat.type,
+        title=chat.title,
+        username=chat.username,
+        photo_url=chat.photo_url,
+    )
+
+
+def _map_telegram_chat_member(chat_member) -> TelegramChatMemberResponse | None:
+    """Map TelegramChatMember to TelegramChatMemberResponse."""
+    if not chat_member:
+        return None
+    return TelegramChatMemberResponse(
+        status=chat_member.status,
+        user=_map_telegram_user(chat_member.user),
+        is_anonymous=chat_member.is_anonymous,
+        custom_title=chat_member.custom_title,
+    )
+
+
+def _map_telegram_auth_data(auth_data: TelegramAuthData) -> TelegramAuthDataResponse:
+    """Map TelegramAuthData to TelegramAuthDataResponse."""
+    return TelegramAuthDataResponse(
+        user=_map_telegram_user(auth_data.user),
+        chat=_map_telegram_chat(auth_data.chat),
+        chat_member=_map_telegram_chat_member(auth_data.chat_member),
+        chat_type=auth_data.chat_type,
+        auth_date=auth_data.auth_date,
+        start_param=auth_data.start_param,
+        can_send_after=auth_data.can_send_after,
+    )
 
 
 @router.post(
@@ -137,10 +208,56 @@ async def logout(
         _handle_auth_error(exc)
 
 
-@router.get("/protected")
+@router.get(
+    "/protected",
+    dependencies=[Security(jwt_security)],
+    responses={
+        200: {"description": "JWT claims successfully retrieved"},
+        401: {"description": "Invalid or expired JWT token"},
+    },
+)
 async def protected(
     payload: TokenPayload = Depends(get_access_token_payload),
 ):
     """Protected endpoint for testing JWT authentication with blacklist checking."""
     claims: dict[str, Any] = dict(payload.claims)
     return claims
+
+
+@router.get(
+    "/telegram/me",
+    response_model=TelegramAuthDataResponse,
+    responses={
+        200: {"description": "Telegram user data successfully retrieved"},
+        401: {"description": "Invalid Telegram Mini App init data"},
+    },
+)
+async def get_telegram_me(
+    auth_data: TelegramAuthData = Depends(get_telegram_auth_data),
+):
+    return _map_telegram_auth_data(auth_data)
+
+@router.get(
+    "/telegram/user-id",
+    responses={
+        200: {"description": "Telegram user ID successfully retrieved"},
+        401: {"description": "Invalid Telegram Mini App init data"},
+    },
+)
+async def get_telegram_user_id(
+    user_id: TelegramId = Depends(get_telegram_current_user),
+):
+    return {"user_id": user_id.value}
+
+
+@router.get(
+    "/telegram/protected",
+    responses={
+        200: {"description": "Telegram Mini App authentication successful"},
+        401: {"description": "Invalid Telegram Mini App init data"},
+    },
+)
+async def telegram_protected(
+    user_id: TelegramId = Depends(get_telegram_current_user),
+):
+    return {"message": "Telegram Mini App authentication successful", "user_id": user_id.value}

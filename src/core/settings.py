@@ -46,6 +46,10 @@ class JWTSettings(BaseModel):
     refresh_token_expire_minutes: int
 
 
+class TelegramSettings(BaseModel):
+    bot_token: str
+
+
 class Settings(BaseSettings):
     db_host: str
     db_port: int
@@ -70,6 +74,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str
     jwt_access_token_expire_minutes: int
     jwt_refresh_token_expire_minutes: int
+
+    telegram_bot_token: str
 
     application_admin_telegram_ids: str = ""
 
@@ -114,6 +120,12 @@ class Settings(BaseSettings):
             algorithm=self.jwt_algorithm,
             access_token_expire_minutes=self.jwt_access_token_expire_minutes,
             refresh_token_expire_minutes=self.jwt_refresh_token_expire_minutes,
+        )
+
+    @property
+    def telegram(self) -> TelegramSettings:
+        return TelegramSettings(
+            bot_token=self.telegram_bot_token,
         )
 
     @property

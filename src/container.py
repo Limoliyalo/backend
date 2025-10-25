@@ -24,9 +24,12 @@ from src.adapters.repositories.healthity import (
     SQLAlchemyUsersRepository,
 )
 from src.core.auth.jwt_service import JwtService
+from src.core.auth.telegram_mini_app_auth import TelegramMiniAppAuth
 from src.core.auth.providers import (
     AccessTokenPayloadProvider,
     CurrentUserProvider,
+    TelegramMiniAppAuthProvider,
+    TelegramMiniAppCurrentUserProvider,
 )
 from src.core.settings import settings
 from src.core.security import PasswordHasher, TokenHasher
@@ -163,6 +166,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     password_hasher = providers.Singleton(PasswordHasher)
     token_hasher = providers.Singleton(TokenHasher)
     jwt_service = providers.Singleton(JwtService)
+    telegram_mini_app_auth = providers.Singleton(
+        TelegramMiniAppAuth, bot_token=settings_provider.provided.telegram.bot_token
+    )
 
     session_factory = providers.Object(session_manager.async_session)
     unit_of_work = providers.Factory(
@@ -263,6 +269,18 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     current_user_provider = providers.Factory(
         CurrentUserProvider, payload_provider=access_token_payload_provider
+    )
+
+    # Telegram Mini App auth providers
+    telegram_mini_app_auth_provider = providers.Factory(
+        TelegramMiniAppAuthProvider, tma_auth=telegram_mini_app_auth
+    )
+    telegram_mini_app_current_user_provider = providers.Factory(
+        TelegramMiniAppCurrentUserProvider, tma_auth=telegram_mini_app_auth
+    )
+    tma_auth = providers.Singleton(
+        TelegramMiniAppAuth,
+        bot_token=settings.telegram_bot_token,
     )
 
     login_use_case = providers.Factory(

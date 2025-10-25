@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi
 
 from src.adapters.database.session import session_manager
 from src.container import ApplicationContainer
@@ -50,6 +51,39 @@ def create_app() -> FastAPI:
             await session_manager.close()
 
     app = FastAPI(title="Healthity backend", lifespan=lifespan, version="1.0.0")
+
+    # Custom OpenAPI schema with security schemes
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+
+        openapi_schema = get_openapi(
+            title="Healthity Backend API",
+            version="1.0.0",
+            description="API для управления персонажами, предметами и активностями в игре Healthity",
+            routes=app.routes,
+        )
+
+        # Add security schemes
+        openapi_schema["components"]["securitySchemes"] = {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "JWT Bearer Token для стандартной авторизации",
+            },
+            "TelegramMiniAppAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "Telegram Init Data",
+                "description": "Telegram Mini App Init Data. Формат: <init_data>",
+            },
+        }
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

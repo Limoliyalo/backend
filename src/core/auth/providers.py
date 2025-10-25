@@ -1,10 +1,12 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.core.auth.jwt_service import JwtService, TokenPayload, TokenType
+from src.core.auth.telegram_mini_app_auth import TelegramMiniAppAuth
+from src.core.auth.schemas.tma import TelegramAuthData
 from src.domain.exceptions import InvalidTokenException, TokenExpiredException
 from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import UnauthorizedException
@@ -92,3 +94,67 @@ class CurrentUserProvider:
             return TelegramId(int(payload.sub))
         except (TypeError, ValueError) as exc:
             raise _unauthorized("Invalid subject claim") from exc
+
+
+def _unauthorized(msg: str):
+    from fastapi import HTTPException, status
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=msg)
+
+class TelegramMiniAppAuthProvider:
+    """Читает Authorization и возвращает TelegramAuthData.
+       Поддерживает:
+         - Authorization: tma <initDataRaw>
+         - Authorization: Bearer <initDataRaw>
+         - Authorization: <initDataRaw>
+    """
+
+    def __init__(self, tma_auth) -> None:
+        self._tma_auth = tma_auth
+
+    @staticmethod
+    def _extract_init_data(authorization: str) -> str:
+        s = authorization.strip()
+        if not s:
+            return ""
+        parts = s.split(" ", 1)
+        if len(parts) == 1:
+            return parts[0]
+        scheme, rest = parts[0].lower(), parts[1].strip()
+        if scheme in ("tma", "bearer"):
+            return rest
+        # неизвестная схема — трактуем всё как initDataRaw
+        return s
+
+    async def __call__(self, request: Request) -> TelegramAuthData:
+        authorization = request.headers.get("authorization")
+        if not authorization:
+            _unauthorized("Missing Authorization header")
+
+        init_data_raw = self._extract_init_data(authorization)
+        if not init_data_raw:
+            _unauthorized("Empty init data")
+
+        try:
+            return self._tma_auth.validate_init_data(init_data_raw)
+        except InvalidTokenException as exc:
+            _unauthorized(str(exc))
+
+class TelegramMiniAppCurrentUserProvider:
+    """
+    Provider for getting current user from Telegram Mini App auth data.
+    """
+
+    def __init__(self, tma_auth: TelegramMiniAppAuth) -> None:
+        self._tma_auth = tma_auth
+
+    async def __call__(
+        self,
+        auth_data: Annotated[
+            TelegramAuthData,
+            Depends(TelegramMiniAppAuthProvider),
+        ],
+    ) -> TelegramId:
+        try:
+            return self._tma_auth.get_telegram_id(auth_data)
+        except InvalidTokenException as exc:
+            raise _unauthorized(str(exc)) from exc
