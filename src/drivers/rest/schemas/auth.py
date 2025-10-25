@@ -65,9 +65,4 @@ class TelegramChatMemberResponse(BaseModel):
 
 class TelegramAuthDataResponse(BaseModel):
     user: Optional[TelegramUserResponse] = None
-    chat: Optional[TelegramChatResponse] = None
-    chat_member: Optional[TelegramChatMemberResponse] = None
-    chat_type: Optional[str] = None
     auth_date: Optional[int] = None
-    start_param: Optional[str] = None
-    can_send_after: Optional[int] = None

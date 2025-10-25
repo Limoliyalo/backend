@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.core.auth.jwt_service import JwtService, TokenPayload, TokenType
@@ -98,14 +98,16 @@ class CurrentUserProvider:
 
 def _unauthorized(msg: str):
     from fastapi import HTTPException, status
+
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=msg)
+
 
 class TelegramMiniAppAuthProvider:
     """Читает Authorization и возвращает TelegramAuthData.
-       Поддерживает:
-         - Authorization: tma <initDataRaw>
-         - Authorization: Bearer <initDataRaw>
-         - Authorization: <initDataRaw>
+    Поддерживает:
+      - Authorization: tma <initDataRaw>
+      - Authorization: Bearer <initDataRaw>
+      - Authorization: <initDataRaw>
     """
 
     def __init__(self, tma_auth) -> None:
@@ -138,6 +140,7 @@ class TelegramMiniAppAuthProvider:
             return self._tma_auth.validate_init_data(init_data_raw)
         except InvalidTokenException as exc:
             _unauthorized(str(exc))
+
 
 class TelegramMiniAppCurrentUserProvider:
     """

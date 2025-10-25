@@ -4,8 +4,8 @@ from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, status
 
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.adapters.repositories.exceptions import RepositoryError
 from src.container import ApplicationContainer
 from src.domain.exceptions import EntityNotFoundException
@@ -155,14 +155,14 @@ async def remove_friend(
 @router.get("/me", response_model=list[UserFriendResponse])
 @inject
 async def list_my_friends(
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: ListUserFriendsUseCase = Depends(
         Provide[ApplicationContainer.list_user_friends_use_case]
     ),
 ):
     """Получить список своих друзей"""
-    telegram_id = int(payload.sub)
-    friends = await use_case.execute(telegram_id)
+    
+    friends = await use_case.execute(telegram_id.value)
     return [
         UserFriendResponse(
             id=friend.id,
@@ -180,16 +180,16 @@ async def list_my_friends(
 @inject
 async def add_my_friend(
     data: UserFriendCreate,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: AddFriendUseCase = Depends(
         Provide[ApplicationContainer.add_friend_use_case]
     ),
 ):
     """Добавить друга"""
-    telegram_id = int(payload.sub)
+    
     try:
         input_data = AddFriendInput(
-            owner_tg_id=telegram_id, friend_tg_id=data.friend_tg_id
+            owner_tg_id=telegram_id.value, friend_tg_id=data.friend_tg_id
         )
         friend = await use_case.execute(input_data)
         return UserFriendResponse(
@@ -206,14 +206,14 @@ async def add_my_friend(
 @inject
 async def remove_my_friend(
     friend_tg_id: int,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     use_case: RemoveFriendUseCase = Depends(
         Provide[ApplicationContainer.remove_friend_use_case]
     ),
 ):
     """Удалить друга из своего списка"""
-    telegram_id = int(payload.sub)
+    
     try:
-        await use_case.execute(telegram_id, friend_tg_id)
+        await use_case.execute(telegram_id.value, friend_tg_id)
     except RepositoryError as e:
         raise NotFoundException(detail=str(e))

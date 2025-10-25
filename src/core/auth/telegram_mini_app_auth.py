@@ -6,8 +6,6 @@ from init_data_py import errors as init_data_errors
 from src.core.auth.schemas.tma import (
     TelegramAuthData,
     TelegramUser,
-    TelegramChat,
-    TelegramChatMember,
 )
 from src.domain.exceptions import InvalidTokenException
 from src.domain.value_objects.telegram_id import TelegramId
@@ -22,95 +20,42 @@ class TelegramMiniAppAuth:
         self.bot_token = bot_token
 
     def validate_init_data(self, init_data_raw: str) -> TelegramAuthData:
-        """
-        Validate Telegram Mini App init data and return parsed data.
-
-        Args:
-            init_data_raw: Raw init data string from Authorization header
-
-        Returns:
-            TelegramAuthData: Parsed and validated data
-
-        Raises:
-            InvalidTokenException: If validation fails
-        """
         try:
-            # Parse the init data
             init_data = InitData.parse(init_data_raw)
-
-            # Validate the init data
             init_data.validate(self.bot_token)
 
-            # Extract user data
+            # ---------- USER ----------
+            user_obj = getattr(init_data, "user", None)
             user = None
-            if init_data.user:
+            if user_obj is not None:
                 user = TelegramUser(
-                    id=init_data.user.id,
-                    first_name=init_data.user.first_name,
-                    last_name=init_data.user.last_name,
-                    username=init_data.user.username,
-                    language_code=init_data.user.language_code,
-                    is_premium=getattr(init_data.user, "is_premium", None),
-                    photo_url=getattr(init_data.user, "photo_url", None),
+                    id=user_obj.id,
+                    first_name=getattr(user_obj, "first_name", None),
+                    last_name=getattr(user_obj, "last_name", None),
+                    username=getattr(user_obj, "username", None),
+                    language_code=getattr(user_obj, "language_code", None),
+                    is_premium=getattr(user_obj, "is_premium", None),
+                    photo_url=getattr(user_obj, "photo_url", None),
                 )
 
-            # Extract chat data
-            chat = None
-            if init_data.chat:
-                chat = TelegramChat(
-                    id=init_data.chat.id,
-                    type=init_data.chat.type,
-                    title=getattr(init_data.chat, "title", None),
-                    username=getattr(init_data.chat, "username", None),
-                    photo_url=getattr(init_data.chat, "photo_url", None),
-                )
+            # ---------- AUTH_DATE ----------
+            auth_date = getattr(init_data, "auth_date", None)
 
-            # Extract chat member data
-            chat_member = None
-            if init_data.chat_member:
-                chat_member_user = None
-                if init_data.chat_member.user:
-                    chat_member_user = TelegramUser(
-                        id=init_data.chat_member.user.id,
-                        first_name=init_data.chat_member.user.first_name,
-                        last_name=init_data.chat_member.user.last_name,
-                        username=init_data.chat_member.user.username,
-                        language_code=init_data.chat_member.user.language_code,
-                        is_premium=getattr(
-                            init_data.chat_member.user, "is_premium", None
-                        ),
-                        photo_url=getattr(
-                            init_data.chat_member.user, "photo_url", None
-                        ),
-                    )
+            # В разных версиях lib сырьё называется raw / raw_data
+            raw_data = getattr(init_data, "raw_data", None)
+            if raw_data is None:
+                raw_data = getattr(init_data, "raw", None)
 
-                chat_member = TelegramChatMember(
-                    status=init_data.chat_member.status,
-                    user=chat_member_user,
-                    is_anonymous=getattr(init_data.chat_member, "is_anonymous", None),
-                    custom_title=getattr(init_data.chat_member, "custom_title", None),
-                )
-
-            # Create auth data object
             auth_data = TelegramAuthData(
                 user=user,
-                chat=chat,
-                chat_member=chat_member,
-                chat_type=getattr(init_data, "chat_type", None),
-                auth_date=getattr(init_data, "auth_date", None),
-                start_param=getattr(init_data, "start_param", None),
-                can_send_after=getattr(init_data, "can_send_after", None),
-                raw_data=init_data.raw_data if hasattr(init_data, "raw_data") else None,
+                auth_date=auth_date,
+                raw_data=raw_data,
             )
 
             logger.debug(
                 "Successfully validated TMA init data",
-                extra={
-                    "user_id": user.id if user else None,
-                    "chat_id": chat.id if chat else None,
-                },
+                extra={"user_id": getattr(user, "id", None)},
             )
-
             return auth_data
 
         except (

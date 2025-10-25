@@ -66,12 +66,6 @@ def create_app() -> FastAPI:
 
         # Add security schemes
         openapi_schema["components"]["securitySchemes"] = {
-            "BearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": "JWT Bearer Token для стандартной авторизации",
-            },
             "TelegramMiniAppAuth": {
                 "type": "http",
                 "scheme": "bearer",

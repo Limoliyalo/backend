@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
@@ -147,7 +147,7 @@ async def list_my_mood_history(
         None, description="Начальная дата (включительно)"
     ),
     end_date: datetime | None = Query(None, description="Конечная дата (включительно)"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -163,10 +163,10 @@ async def list_my_mood_history(
     Можно фильтровать по диапазону дат или использовать limit.
     Если указаны start_date и end_date, limit игнорируется.
     """
-    telegram_id = int(payload.sub)
+    
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         if start_date and end_date:
             mood_history = await mood_repo.list_for_date_range(
@@ -187,7 +187,7 @@ async def list_my_mood_history(
 async def create_my_mood_entry(
     mood: str = Query(..., description="Настроение"),
     trigger: str | None = Query(None, description="Триггер"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -196,10 +196,10 @@ async def create_my_mood_entry(
     ),
 ):
     """Создать запись о настроении для текущего пользователя"""
-    telegram_id = int(payload.sub)
+    
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         input_data = CreateMoodHistoryInput(
             character_id=character.id,

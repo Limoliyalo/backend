@@ -41,10 +41,5 @@ class TelegramAuthData:
     """Parsed and validated Telegram Mini App init data."""
 
     user: Optional[TelegramUser] = None
-    chat: Optional[TelegramChat] = None
-    chat_member: Optional[TelegramChatMember] = None
-    chat_type: Optional[str] = None
     auth_date: Optional[int] = None
-    start_param: Optional[str] = None
-    can_send_after: Optional[int] = None
     raw_data: Optional[Dict[str, Any]] = None

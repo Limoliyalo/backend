@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
-from src.core.auth.dependencies import get_access_token_payload
-from src.core.auth.jwt_service import TokenPayload
+from src.core.auth.dependencies import get_telegram_current_user
+from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
@@ -154,7 +154,7 @@ async def list_my_daily_activities(
     ),
     start_date: datetime | None = Query(None, description="Начальная дата диапазона"),
     end_date: datetime | None = Query(None, description="Конечная дата диапазона"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -166,10 +166,10 @@ async def list_my_daily_activities(
     ),
 ):
     """Получить активности текущего пользователя за день или диапазон дат"""
-    telegram_id = int(payload.sub)
+    
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         if start_date and end_date:
             activities = await activities_repo.list_for_date_range(
@@ -197,7 +197,7 @@ async def create_my_daily_activity(
     value: int = Query(0, ge=0, description="Значение активности"),
     goal: int = Query(1, ge=1, description="Цель активности"),
     notes: str | None = Query(None, description="Заметки"),
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -206,10 +206,10 @@ async def create_my_daily_activity(
     ),
 ):
     """Создать активность для текущего пользователя"""
-    telegram_id = int(payload.sub)
+    
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         input_data = CreateDailyActivityInput(
             character_id=character.id,
@@ -232,7 +232,7 @@ async def create_my_daily_activity(
 async def update_my_daily_activity(
     activity_id: UUID,
     data: DailyActivityUpdate,
-    payload: TokenPayload = Depends(get_access_token_payload),
+    telegram_id: TelegramId = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -244,10 +244,10 @@ async def update_my_daily_activity(
     ),
 ):
     """Обновить активность текущего пользователя"""
-    telegram_id = int(payload.sub)
+    
     try:
 
-        character = await get_character_use_case.execute(telegram_id)
+        character = await get_character_use_case.execute(telegram_id.value)
 
         activity = await get_activity_use_case.execute(activity_id)
         if activity.character_id != character.id:
