@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Body, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
@@ -14,6 +14,7 @@ from src.drivers.rest.schemas.activities import (
     BaseCharacterActivityDelete,
     BaseCharacterActivityResponse,
     BaseCharacterActivityUpdate,
+    BaseCharacterActivityUserCreate,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.use_cases.base_character_activities.manage_base_character_activities import (
@@ -80,8 +81,7 @@ async def get_base_character_activity(
 )
 @inject
 async def create_base_character_activity(
-    character_id: UUID = Query(..., description="ID персонажа"),
-    data: BaseCharacterActivityCreate = Body(...),
+    data: BaseCharacterActivityCreate,
     _: int = Depends(admin_user_provider),
     use_case: CreateBaseCharacterActivityUseCase = Depends(
         Provide[ApplicationContainer.create_base_character_activity_use_case]
@@ -90,7 +90,7 @@ async def create_base_character_activity(
     """Создать базовую активность (требуется админ-доступ)"""
     try:
         input_data = CreateBaseCharacterActivityInput(
-            character_id=character_id,
+            character_id=data.character_id,
             activity_type_id=data.activity_type_id,
             goal=data.goal,
         )
@@ -176,7 +176,7 @@ async def list_my_base_character_activities(
 )
 @inject
 async def create_my_base_character_activity(
-    data: BaseCharacterActivityCreate,
+    data: BaseCharacterActivityUserCreate,
     telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]

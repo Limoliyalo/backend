@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class UserBase(BaseModel):
@@ -19,7 +19,17 @@ class UserRegister(BaseModel):
     """Публичная регистрация - только telegram_id и пароль"""
 
     telegram_id: int = Field(..., gt=0, description="Telegram ID пользователя")
-    password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
+    password: str | None = Field(
+        None, description="Пароль (минимум 6 символов, опционально)"
+    )
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str | None) -> str | None:
+        """Валидация пароля: если передан, должен быть минимум 6 символов"""
+        if v is not None and len(v) < 6:
+            raise ValueError("Пароль должен содержать минимум 6 символов")
+        return v
 
 
 class UserUpdate(BaseModel):

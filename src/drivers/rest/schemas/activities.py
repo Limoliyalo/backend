@@ -53,6 +53,16 @@ class DailyActivityCreate(DailyActivityBase):
     activity_type_id: UUID
 
 
+class DailyActivityUserCreate(BaseModel):
+    """Схема для создания активности пользователем (без character_id)"""
+
+    activity_type_id: UUID = Field(..., description="Activity type ID")
+    date: datetime = Field(..., description="Date of activity")
+    value: int = Field(default=0, ge=0, description="Value must be non-negative")
+    goal: int | None = Field(None, ge=1, description="Goal must be at least 1")
+    notes: str | None = Field(None, max_length=255, description="Notes")
+
+
 class DailyActivityUpdate(BaseModel):
     activity_id: UUID = Field(..., description="Activity ID")
     value: int | None = Field(None, ge=0, description="Value must be non-negative")
@@ -92,6 +102,28 @@ class DailyProgressBase(BaseModel):
 
 class DailyProgressCreate(DailyProgressBase):
     character_id: UUID
+
+
+class DailyProgressUserCreate(BaseModel):
+    """Схема для создания прогресса пользователем (без character_id)"""
+
+    date: datetime = Field(..., description="Date of progress")
+    experience_gained: int = Field(
+        default=0, ge=0, description="Experience gained must be non-negative"
+    )
+    mood_average: str | None = Field(None, max_length=50, description="Mood average")
+    behavior_index: int | None = Field(
+        None, ge=0, description="Behavior index must be non-negative"
+    )
+
+    @field_validator("mood_average")
+    @classmethod
+    def validate_mood_average(cls, v: str | None) -> str | None:
+        if v is not None and v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError(
+                "Mood average must be one of: neutral, happy, sad, angry, bored"
+            )
+        return v
 
 
 class DailyProgressUpdate(BaseModel):
@@ -137,6 +169,20 @@ class MoodHistoryCreate(MoodHistoryBase):
     character_id: UUID
 
 
+class MoodHistoryUserCreate(BaseModel):
+    """Схема для создания записи настроения пользователем (без character_id)"""
+
+    mood: str = Field(..., description="Mood")
+    trigger: str | None = Field(None, description="Trigger")
+
+    @field_validator("mood")
+    @classmethod
+    def validate_mood(cls, v: str) -> str:
+        if v not in ["neutral", "happy", "sad", "angry", "bored"]:
+            raise ValueError("Mood must be one of: neutral, happy, sad, angry, bored")
+        return v
+
+
 class MoodHistoryUpdate(BaseModel):
     mood_history_id: UUID = Field(..., description="Mood history ID")
     mood: str | None = None
@@ -167,7 +213,15 @@ class BaseCharacterActivityBase(BaseModel):
 
 
 class BaseCharacterActivityCreate(BaseModel):
+    character_id: UUID = Field(..., description="Character ID")
     activity_type_id: UUID
+    goal: int | None = Field(None, ge=1, description="Goal must be at least 1")
+
+
+class BaseCharacterActivityUserCreate(BaseModel):
+    """Схема для создания базовой активности пользователем (без character_id)"""
+
+    activity_type_id: UUID = Field(..., description="Activity type ID")
     goal: int | None = Field(None, ge=1, description="Goal must be at least 1")
 
 

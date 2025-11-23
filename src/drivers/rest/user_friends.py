@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.adapters.repositories.exceptions import RepositoryError
+from src.adapters.repositories.exceptions import (
+    DuplicateEntityError,
+    RepositoryError,
+)
 from src.container import ApplicationContainer
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
@@ -16,6 +19,7 @@ from src.drivers.rest.schemas.user_friends import (
     UserFriendDelete,
     UserFriendResponse,
     UserFriendUpdate,
+    UserFriendUserCreate,
 )
 from src.drivers.rest.schemas.activities import (
     BaseCharacterActivityResponse,
@@ -123,6 +127,8 @@ async def add_friend(
             friend_tg_id=friend.friend_tg_id,
             created_at=friend.created_at,
         )
+    except DuplicateEntityError:
+        raise BadRequestException(detail="This user is already in the friend list")
     except ValueError as e:
         raise BadRequestException(detail=str(e))
 
@@ -198,7 +204,7 @@ async def list_my_friends(
 )
 @inject
 async def add_my_friend(
-    data: UserFriendCreate,
+    data: UserFriendUserCreate,
     telegram_id: int = Depends(get_telegram_current_user),
     use_case: AddFriendUseCase = Depends(
         Provide[ApplicationContainer.add_friend_use_case]
@@ -217,6 +223,8 @@ async def add_my_friend(
             friend_tg_id=friend.friend_tg_id,
             created_at=friend.created_at,
         )
+    except DuplicateEntityError:
+        raise BadRequestException(detail="This user is already in your friends list")
     except ValueError as e:
         raise BadRequestException(detail=str(e))
 

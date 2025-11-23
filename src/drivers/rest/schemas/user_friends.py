@@ -15,6 +15,12 @@ class UserFriendCreate(BaseModel):
     friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
+class UserFriendUserCreate(BaseModel):
+    """Схема для создания друга пользователем (без owner_tg_id)"""
+
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
+
+
 class UserFriendUpdate(BaseModel):
     friend_id: UUID = Field(..., description="Friend ID")
     friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")

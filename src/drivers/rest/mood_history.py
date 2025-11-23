@@ -14,6 +14,7 @@ from src.drivers.rest.schemas.activities import (
     MoodHistoryDelete,
     MoodHistoryResponse,
     MoodHistoryUpdate,
+    MoodHistoryUserCreate,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.ports.repositories.healthity.activities import MoodHistoryRepository
@@ -203,8 +204,7 @@ async def get_my_mood_history(
 )
 @inject
 async def create_my_mood_entry(
-    mood: str = Query(..., description="Настроение"),
-    trigger: str | None = Query(None, description="Триггер"),
+    data: MoodHistoryUserCreate,
     telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
@@ -220,8 +220,8 @@ async def create_my_mood_entry(
 
         input_data = CreateMoodHistoryInput(
             character_id=character.id,
-            mood=mood,
-            trigger=trigger,
+            mood=data.mood,
+            trigger=data.trigger,
         )
         mood_history = await use_case.execute(input_data)
         return MoodHistoryResponse.model_validate(mood_history)

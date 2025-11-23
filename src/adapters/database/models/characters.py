@@ -90,7 +90,7 @@ class CharacterItemModel(Base):
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("items.id", ondelete="RESTRICT"),
+        ForeignKey("items.id", ondelete="CASCADE"),
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(
@@ -136,7 +136,7 @@ class CharacterBackgroundModel(Base):
     )
     background_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("backgrounds.id", ondelete="RESTRICT"),
+        ForeignKey("backgrounds.id", ondelete="CASCADE"),
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(

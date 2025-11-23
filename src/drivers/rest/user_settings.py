@@ -39,14 +39,14 @@ async def get_my_settings(
 
 @router.patch("/me", response_model=UserSettingsResponse)
 @inject
-async def update_my_settings(
+async def get_or_create_user_settings(
     data: UserSettingsUpdate,
     telegram_id: int = Depends(get_telegram_current_user),
     use_case: PatchUserSettingsUseCase = Depends(
         Provide[ApplicationContainer.patch_user_settings_use_case]
     ),
 ):
-    """Обновить настройки текущего пользователя"""
+    """Получить или создать настройки текущего пользователя"""
     input_data = data.to_patch_input(telegram_id)
     try:
         settings = await use_case.execute(input_data)

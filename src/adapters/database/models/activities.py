@@ -62,7 +62,7 @@ class BaseCharacterActivityModel(TimestampMixin, Base):
     )
     activity_type_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("activity_types.id", ondelete="RESTRICT"),
+        ForeignKey("activity_types.id", ondelete="CASCADE"),
         nullable=False,
     )
     goal: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -98,7 +98,7 @@ class CharacterActivityHistoryModel(TimestampMixin, Base):
     )
     activity_type_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("activity_types.id", ondelete="RESTRICT"),
+        ForeignKey("activity_types.id", ondelete="CASCADE"),
         nullable=False,
     )
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)

@@ -15,6 +15,7 @@ from src.drivers.rest.schemas.activities import (
     DailyProgressDelete,
     DailyProgressResponse,
     DailyProgressUpdate,
+    DailyProgressUserCreate,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
@@ -255,16 +256,7 @@ async def get_my_progress(
 )
 @inject
 async def create_or_update_daily_progress(
-    date: datetime = Query(
-        ..., description="Дата прогресса", example="2025-10-25 00:00:00"
-    ),
-    experience_gained: int = Query(0, ge=0, description="Полученный опыт"),
-    mood_average: str | None = Query(
-        None, description="Среднее настроение (neutral, happy, sad, angry, bored)"
-    ),
-    behavior_index: int | None = Query(
-        None, ge=0, le=100, description="Индекс поведения (0-100)"
-    ),
+    data: DailyProgressUserCreate,
     telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
@@ -280,10 +272,10 @@ async def create_or_update_daily_progress(
 
         input_data = CreateDailyProgressInput(
             character_id=character.id,
-            date=date,
-            experience_gained=experience_gained,
-            mood_average=mood_average,
-            behavior_index=behavior_index,
+            date=data.date,
+            experience_gained=data.experience_gained,
+            mood_average=data.mood_average,
+            behavior_index=data.behavior_index,
         )
         progress = await use_case.execute(input_data)
         return DailyProgressResponse.model_validate(progress)
