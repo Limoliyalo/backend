@@ -14,6 +14,7 @@ from src.drivers.rest.schemas.users import (
     ChangePasswordRequest,
     DepositRequest,
     UserCreate,
+    UserDelete,
     UserRegister,
     UserResponse,
     UserStatisticsResponse,
@@ -237,12 +238,9 @@ async def create_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.put(
-    "/{telegram_id}/admin", response_model=UserResponse, status_code=status.HTTP_200_OK
-)
+@router.put("/admin", response_model=UserResponse, status_code=status.HTTP_200_OK)
 @inject
 async def update_user(
-    telegram_id: int,
     data: UserUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateUserUseCase = Depends(
@@ -252,7 +250,7 @@ async def update_user(
     """Обновить пользователя (требуется админ-доступ)"""
     try:
         input_data = UpdateUserInput(
-            telegram_id=telegram_id,
+            telegram_id=data.telegram_id,
             password=data.password,
             is_active=data.is_active,
             balance=data.balance,
@@ -265,10 +263,10 @@ async def update_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.delete("/{telegram_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_user(
-    telegram_id: int,
+    data: UserDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteUserUseCase = Depends(
         Provide[ApplicationContainer.delete_user_use_case]
@@ -276,7 +274,7 @@ async def delete_user(
 ):
     """Удалить пользователя (требуется админ-доступ)"""
     try:
-        await use_case.execute(telegram_id)
+        await use_case.execute(data.telegram_id)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
 

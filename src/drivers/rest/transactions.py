@@ -11,6 +11,7 @@ from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
     TransactionCreate,
+    TransactionDelete,
     TransactionResponse,
     TransactionUpdate,
 )
@@ -83,10 +84,9 @@ async def create_transaction(
     return TransactionResponse.model_validate(transaction)
 
 
-@router.patch("/{transaction_id}/admin", response_model=TransactionResponse)
+@router.patch("/admin", response_model=TransactionResponse)
 @inject
 async def update_transaction(
-    transaction_id: UUID,
     data: TransactionUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateTransactionUseCase = Depends(
@@ -96,7 +96,7 @@ async def update_transaction(
     """Обновить транзакцию (требуется админ-доступ)"""
     try:
         input_data = UpdateTransactionInput(
-            transaction_id=transaction_id,
+            transaction_id=data.transaction_id,
             amount=data.amount,
             type=data.type,
             description=data.description,
@@ -107,10 +107,10 @@ async def update_transaction(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{transaction_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_transaction(
-    transaction_id: UUID,
+    data: TransactionDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteTransactionUseCase = Depends(
         Provide[ApplicationContainer.delete_transaction_use_case]
@@ -118,7 +118,7 @@ async def delete_transaction(
 ):
     """Удалить транзакцию (требуется админ-доступ)"""
     try:
-        await use_case.execute(transaction_id)
+        await use_case.execute(data.transaction_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 

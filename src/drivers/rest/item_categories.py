@@ -10,6 +10,7 @@ from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_categories import (
     ItemCategoryCreate,
+    ItemCategoryDelete,
     ItemCategoryResponse,
     ItemCategoryUpdate,
 )
@@ -83,13 +84,12 @@ async def create_item_category(
 
 
 @router.put(
-    "/{category_id}/admin",
+    "/admin",
     response_model=ItemCategoryResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def update_item_category(
-    category_id: UUID,
     data: ItemCategoryUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateItemCategoryUseCase = Depends(
@@ -98,17 +98,19 @@ async def update_item_category(
 ):
     """Обновить категорию (требуется админ-доступ)"""
     try:
-        input_data = UpdateItemCategoryInput(category_id=category_id, name=data.name)
+        input_data = UpdateItemCategoryInput(
+            category_id=data.category_id, name=data.name
+        )
         category = await use_case.execute(input_data)
         return ItemCategoryResponse.model_validate(category)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{category_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_item_category(
-    category_id: UUID,
+    data: ItemCategoryDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteItemCategoryUseCase = Depends(
         Provide[ApplicationContainer.delete_item_category_use_case]
@@ -116,7 +118,7 @@ async def delete_item_category(
 ):
     """Удалить категорию (требуется админ-доступ)"""
     try:
-        await use_case.execute(category_id)
+        await use_case.execute(data.category_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 

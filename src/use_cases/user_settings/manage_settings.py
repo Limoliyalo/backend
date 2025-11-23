@@ -118,9 +118,11 @@ class PatchUserSettingsUseCase:
                 quiet_end_time=(
                     data.quiet_end_time if data._quiet_end_time_provided else None
                 ),
-                muted_days=data.muted_days if data._muted_days_provided else [],
+                muted_days=(data.muted_days or []) if data._muted_days_provided else [],
                 do_not_disturb=(
-                    data.do_not_disturb if data._do_not_disturb_provided else False
+                    (data.do_not_disturb if data.do_not_disturb is not None else False)
+                    if data._do_not_disturb_provided
+                    else False
                 ),
             )
         else:

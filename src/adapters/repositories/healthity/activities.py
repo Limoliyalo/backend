@@ -6,7 +6,8 @@ from sqlalchemy import delete, select
 
 from src.adapters.database.models.activities import (
     ActivityTypeModel,
-    DailyActivityModel,
+    BaseCharacterActivityModel,
+    CharacterActivityHistoryModel,
     DailyProgressModel,
     MoodHistoryModel,
 )
@@ -14,12 +15,14 @@ from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.domain.entities.healthity.activities import (
     ActivityType,
-    DailyActivity,
+    BaseCharacterActivity,
+    CharacterActivityHistory,
     DailyProgress,
     MoodHistory,
 )
 from src.ports.repositories.healthity.activities import (
     ActivityTypesRepository,
+    BaseCharacterActivitiesRepository,
     DailyActivitiesRepository,
     DailyProgressRepository,
     MoodHistoryRepository,
@@ -50,7 +53,7 @@ class SQLAlchemyActivityTypesRepository(
             return None
         return self._to_domain(model)
 
-    async def add(self, activity_type: ActivityType) -> ActivityType:
+    async def add(self, activity_type: ActivityType) -> ActivityType:  # type: ignore[override]
         model = ActivityTypeModel(
             id=activity_type.id,
             name=activity_type.name,
@@ -77,7 +80,7 @@ class SQLAlchemyActivityTypesRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, activity_type_id: uuid.UUID) -> None:
+    async def delete(self, activity_type_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(ActivityTypeModel).where(
@@ -98,40 +101,42 @@ class SQLAlchemyActivityTypesRepository(
 
 
 class SQLAlchemyDailyActivitiesRepository(
-    SQLAlchemyRepository[DailyActivityModel], DailyActivitiesRepository
+    SQLAlchemyRepository[CharacterActivityHistoryModel], DailyActivitiesRepository
 ):
-    model = DailyActivityModel
+    model = CharacterActivityHistoryModel
 
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
     async def list_for_day(
         self, character_id: uuid.UUID, day: datetime
-    ) -> list[DailyActivity]:
+    ) -> list[CharacterActivityHistory]:
         models = await self.list(filters={"character_id": character_id, "date": day})
         return [self._to_domain(model) for model in models]
 
     async def list_for_date_range(
         self, character_id: uuid.UUID, start_date: datetime, end_date: datetime
-    ) -> list[DailyActivity]:
+    ) -> list[CharacterActivityHistory]:
         async with self._uow() as uow:
             result = await uow.session.execute(
-                select(DailyActivityModel)
+                select(CharacterActivityHistoryModel)
                 .where(
-                    DailyActivityModel.character_id == character_id,
-                    DailyActivityModel.date >= start_date,
-                    DailyActivityModel.date <= end_date,
+                    CharacterActivityHistoryModel.character_id == character_id,
+                    CharacterActivityHistoryModel.date >= start_date,
+                    CharacterActivityHistoryModel.date <= end_date,
                 )
-                .order_by(DailyActivityModel.date.desc())
+                .order_by(CharacterActivityHistoryModel.date.desc())
             )
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def upsert(self, activity: DailyActivity) -> DailyActivity:
+    async def upsert(
+        self, activity: CharacterActivityHistory
+    ) -> CharacterActivityHistory:
         async with self._uow() as uow:
-            model = await uow.session.get(DailyActivityModel, activity.id)
+            model = await uow.session.get(CharacterActivityHistoryModel, activity.id)
             if model is None:
-                model = DailyActivityModel(
+                model = CharacterActivityHistoryModel(
                     id=activity.id,
                     character_id=activity.character_id,
                     activity_type_id=activity.activity_type_id,
@@ -152,18 +157,22 @@ class SQLAlchemyDailyActivitiesRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def get_by_id(self, activity_id: uuid.UUID) -> DailyActivity | None:
+    async def get_by_id(
+        self, activity_id: uuid.UUID
+    ) -> CharacterActivityHistory | None:
         async with self._uow() as uow:
-            model = await uow.session.get(DailyActivityModel, activity_id)
+            model = await uow.session.get(CharacterActivityHistoryModel, activity_id)
             if model is None:
                 return None
             return self._to_domain(model)
 
-    async def update(self, activity: DailyActivity) -> DailyActivity:
+    async def update(
+        self, activity: CharacterActivityHistory
+    ) -> CharacterActivityHistory:
         async with self._uow() as uow:
-            model = await uow.session.get(DailyActivityModel, activity.id)
+            model = await uow.session.get(CharacterActivityHistoryModel, activity.id)
             if model is None:
-                raise ValueError("DailyActivity not found")
+                raise ValueError("CharacterActivityHistory not found")
 
             model.value = activity.value
             model.goal = activity.goal
@@ -173,19 +182,19 @@ class SQLAlchemyDailyActivitiesRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, activity_id: uuid.UUID) -> None:
+    async def delete(self, activity_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             from sqlalchemy import delete as sql_delete
 
             await uow.session.execute(
-                sql_delete(DailyActivityModel).where(
-                    DailyActivityModel.id == activity_id
+                sql_delete(CharacterActivityHistoryModel).where(
+                    CharacterActivityHistoryModel.id == activity_id
                 )
             )
 
     async def get_by_character_activity_date(
         self, character_id: uuid.UUID, activity_type_id: uuid.UUID, date: datetime
-    ) -> DailyActivity | None:
+    ) -> CharacterActivityHistory | None:
         model = await self.first(
             filters={
                 "character_id": character_id,
@@ -198,8 +207,8 @@ class SQLAlchemyDailyActivitiesRepository(
         return self._to_domain(model)
 
     @staticmethod
-    def _to_domain(model: DailyActivityModel) -> DailyActivity:
-        return DailyActivity(
+    def _to_domain(model: CharacterActivityHistoryModel) -> CharacterActivityHistory:
+        return CharacterActivityHistory(
             id=model.id,
             character_id=model.character_id,
             activity_type_id=model.activity_type_id,
@@ -296,7 +305,7 @@ class SQLAlchemyDailyProgressRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, progress_id: uuid.UUID) -> None:
+    async def delete(self, progress_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             from sqlalchemy import delete as sql_delete
 
@@ -385,7 +394,7 @@ class SQLAlchemyMoodHistoryRepository(
             return None
         return self._to_domain(model)
 
-    async def add(self, mood: MoodHistory) -> MoodHistory:
+    async def add(self, mood: MoodHistory) -> MoodHistory:  # type: ignore[override]
         model = MoodHistoryModel(
             id=mood.id,
             character_id=mood.character_id,
@@ -409,7 +418,7 @@ class SQLAlchemyMoodHistoryRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, mood_id: uuid.UUID) -> None:
+    async def delete(self, mood_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(MoodHistoryModel).where(MoodHistoryModel.id == mood_id)
@@ -423,4 +432,83 @@ class SQLAlchemyMoodHistoryRepository(
             mood=model.mood,
             trigger=model.trigger,
             timestamp=model.timestamp,
+        )
+
+
+class SQLAlchemyBaseCharacterActivitiesRepository(
+    SQLAlchemyRepository[BaseCharacterActivityModel], BaseCharacterActivitiesRepository
+):
+    model = BaseCharacterActivityModel
+
+    def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
+        super().__init__(uow_factory)
+
+    async def list_for_character(
+        self, character_id: uuid.UUID
+    ) -> list[BaseCharacterActivity]:
+        models = await self.list(filters={"character_id": character_id})
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_id(self, activity_id: uuid.UUID) -> BaseCharacterActivity | None:
+        model = await super().get(activity_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    async def get_by_character_and_type(
+        self, character_id: uuid.UUID, activity_type_id: uuid.UUID
+    ) -> BaseCharacterActivity | None:
+        model = await self.first(
+            filters={
+                "character_id": character_id,
+                "activity_type_id": activity_type_id,
+            }
+        )
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    async def add(self, activity: BaseCharacterActivity) -> BaseCharacterActivity:  # type: ignore[override]
+        model = BaseCharacterActivityModel(
+            id=activity.id,
+            character_id=activity.character_id,
+            activity_type_id=activity.activity_type_id,
+            goal=activity.goal,
+            created_at=activity.created_at,
+            updated_at=activity.updated_at,
+        )
+        saved_model = await super().add(model)
+        return self._to_domain(saved_model)
+
+    async def update(self, activity: BaseCharacterActivity) -> BaseCharacterActivity:
+        async with self._uow() as uow:
+            model = await uow.session.get(BaseCharacterActivityModel, activity.id)
+            if model is None:
+                raise ValueError("BaseCharacterActivity not found")
+
+            model.goal = activity.goal
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, activity_id: uuid.UUID) -> None:  # type: ignore[override]
+        async with self._uow() as uow:
+            from sqlalchemy import delete as sql_delete
+
+            await uow.session.execute(
+                sql_delete(BaseCharacterActivityModel).where(
+                    BaseCharacterActivityModel.id == activity_id
+                )
+            )
+
+    @staticmethod
+    def _to_domain(model: BaseCharacterActivityModel) -> BaseCharacterActivity:
+        return BaseCharacterActivity(
+            id=model.id,
+            character_id=model.character_id,
+            activity_type_id=model.activity_type_id,
+            goal=model.goal,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
         )

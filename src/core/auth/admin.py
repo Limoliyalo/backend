@@ -57,6 +57,19 @@ async def admin_user_provider(
             headers={"WWW-Authenticate": "Basic"},
         )
 
+    if user is None:
+        logger.warning(
+            {
+                "action": "admin_auth",
+                "stage": "user_not_found",
+                "data": {"telegram_id": telegram_id},
+            }
+        )
+        raise UnauthorizedException(
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
     if not user.is_admin:
         logger.warning(
             {

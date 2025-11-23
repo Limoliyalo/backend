@@ -14,6 +14,7 @@ class CreateItemInput:
     cost: int = 0
     required_level: int = 1
     is_available: bool = True
+    picture_url: str | None = None
 
 
 @dataclass
@@ -24,6 +25,7 @@ class UpdateItemInput:
     cost: int | None = None
     required_level: int | None = None
     is_available: bool | None = None
+    picture_url: str | None = None
 
 
 class CreateItemUseCase:
@@ -39,6 +41,7 @@ class CreateItemUseCase:
             cost=data.cost,
             required_level=data.required_level,
             is_available=data.is_available,
+            picture_url=data.picture_url,
         )
         return await self._items_repository.add(item)
 
@@ -89,6 +92,8 @@ class UpdateItemUseCase:
             item.required_level = data.required_level
         if data.is_available is not None:
             item.set_availability(data.is_available)
+        if data.picture_url is not None:
+            item.picture_url = data.picture_url
 
         return await self._items_repository.update(item)
 

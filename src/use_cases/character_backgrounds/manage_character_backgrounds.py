@@ -1,6 +1,5 @@
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
 
 from src.domain.entities.healthity.characters import CharacterBackground
 from src.domain.entities.healthity.transactions import Transaction
@@ -184,22 +183,63 @@ class RemoveCharacterBackgroundUseCase:
         await self._character_backgrounds_repository.remove(character_background_id)
 
 
-class ToggleFavouriteBackgroundUseCase:
+@dataclass
+class ToggleFavoriteBackgroundInput:
+    character_id: uuid.UUID
+    background_id: uuid.UUID
+
+
+class ToggleFavoriteBackgroundUseCase:
+    """Переключить избранное для фона (создает запись если её нет)"""
+
     def __init__(
-        self, character_backgrounds_repository: CharacterBackgroundsRepository
+        self,
+        character_backgrounds_repository: CharacterBackgroundsRepository,
+        backgrounds_repository: BackgroundsRepository,
     ) -> None:
         self._character_backgrounds_repository = character_backgrounds_repository
+        self._backgrounds_repository = backgrounds_repository
 
-    async def execute(self, character_background_id: uuid.UUID) -> CharacterBackground:
-        background = await self._character_backgrounds_repository.get_by_id(
-            character_background_id
-        )
+    async def execute(self, data: ToggleFavoriteBackgroundInput) -> CharacterBackground:
+        # Проверяем, что фон существует
+        background = await self._backgrounds_repository.get(data.background_id)
         if background is None:
-            raise EntityNotFoundException(
-                f"CharacterBackground {character_background_id} not found"
+            raise EntityNotFoundException(f"Background {data.background_id} not found")
+
+        # Проверяем, есть ли уже запись об этом фоне
+        existing_backgrounds = (
+            await self._character_backgrounds_repository.list_for_character(
+                data.character_id
             )
-        background.toggle_favourite()
-        return await self._character_backgrounds_repository.update(background)
+        )
+        existing_background = next(
+            (
+                cb
+                for cb in existing_backgrounds
+                if cb.background_id == data.background_id
+            ),
+            None,
+        )
+
+        if existing_background:
+            # Если запись уже существует, переключаем is_favorite
+            existing_background.toggle_favorite()
+            return await self._character_backgrounds_repository.update(
+                existing_background
+            )
+        else:
+            # Создаем новую запись с is_favorite=True, is_purchased=False, is_active=False
+            character_background = CharacterBackground(
+                id=uuid.uuid4(),
+                character_id=data.character_id,
+                background_id=data.background_id,
+                is_active=False,
+                is_favorite=True,
+                is_purchased=False,
+            )
+            return await self._character_backgrounds_repository.add(
+                character_background
+            )
 
 
 @dataclass
@@ -240,28 +280,46 @@ class PurchaseBackgroundWithBalanceUseCase:
                 data.character_id
             )
         )
-        if any(cb.background_id == data.background_id for cb in existing_backgrounds):
-            raise ValueError("Background already purchased")
+        existing_background = next(
+            (
+                cb
+                for cb in existing_backgrounds
+                if cb.background_id == data.background_id
+            ),
+            None,
+        )
 
         telegram_id = data.user_tg_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
-        user.withdraw(background.cost)
-        updated_user = await self._users_repository.update(user)
+        # Если фон уже есть в избранном, просто помечаем как купленный
+        if existing_background:
+            if existing_background.is_purchased:
+                raise ValueError("Background already purchased")
+            existing_background.is_purchased = True
+            updated_background = await self._character_backgrounds_repository.update(
+                existing_background
+            )
+            user.withdraw(background.cost)
+            updated_user = await self._users_repository.update(user)
+            created_background = updated_background
+        else:
+            user.withdraw(background.cost)
+            updated_user = await self._users_repository.update(user)
 
-        character_background = CharacterBackground(
-            id=uuid.uuid4(),
-            character_id=data.character_id,
-            background_id=data.background_id,
-            is_active=False,
-            is_favorite=False,
-            purchased_at=datetime.now(timezone.utc).replace(tzinfo=None),
-        )
-        created_background = await self._character_backgrounds_repository.add(
-            character_background
-        )
+            character_background = CharacterBackground(
+                id=uuid.uuid4(),
+                character_id=data.character_id,
+                background_id=data.background_id,
+                is_active=False,
+                is_favorite=False,
+                is_purchased=True,
+            )
+            created_background = await self._character_backgrounds_repository.add(
+                character_background
+            )
 
         transaction = Transaction(
             id=uuid.uuid4(),

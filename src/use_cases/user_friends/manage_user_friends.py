@@ -69,3 +69,26 @@ class RemoveFriendUseCase:
 
     async def execute(self, owner_tg_id: int, friend_tg_id: int) -> None:
         await self._user_friends_repository.remove(owner_tg_id, friend_tg_id)
+
+
+class CheckMutualFriendshipUseCase:
+    """Проверяет взаимную дружбу между двумя пользователями"""
+
+    def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
+        self._user_friends_repository = user_friends_repository
+
+    async def execute(self, user1_tg_id: int, user2_tg_id: int) -> bool:
+        """
+        Проверяет, что обе стороны добавили друг друга в друзья.
+        Возвращает True только если user1 добавил user2 И user2 добавил user1.
+        """
+        # Проверяем, что user1 добавил user2
+        user1_friends = await self._user_friends_repository.list_for_user(user1_tg_id)
+        user1_added_user2 = any(f.friend_tg_id == user2_tg_id for f in user1_friends)
+
+        # Проверяем, что user2 добавил user1
+        user2_friends = await self._user_friends_repository.list_for_user(user2_tg_id)
+        user2_added_user1 = any(f.friend_tg_id == user1_tg_id for f in user2_friends)
+
+        # Возвращаем True только если обе стороны добавили друг друга
+        return user1_added_user2 and user2_added_user1

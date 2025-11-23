@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import Callable
 
 from sqlalchemy import delete, select
@@ -45,8 +46,8 @@ class SQLAlchemyUserSettingsRepository(
                 )
                 uow.session.add(model)
             else:
-                model.quiet_start_time = settings.quiet_start_time
-                model.quiet_end_time = settings.quiet_end_time
+                model.quiet_start_time = settings.quiet_start_time  # type: ignore[assignment]
+                model.quiet_end_time = settings.quiet_end_time  # type: ignore[assignment]
                 model.muted_days = list(settings.muted_days)
                 model.do_not_disturb = settings.do_not_disturb
 
@@ -60,7 +61,7 @@ class SQLAlchemyUserSettingsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def delete(self, settings_id) -> None:
+    async def delete(self, settings_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(UserSettingsModel).where(UserSettingsModel.id == settings_id)
@@ -71,8 +72,8 @@ class SQLAlchemyUserSettingsRepository(
         return UserSettings(
             id=model.id,
             user_tg_id=model.user_tg_id,
-            quiet_start_time=model.quiet_start_time,
-            quiet_end_time=model.quiet_end_time,
+            quiet_start_time=model.quiet_start_time,  # type: ignore[arg-type]
+            quiet_end_time=model.quiet_end_time,  # type: ignore[arg-type]
             muted_days=list(model.muted_days or []),
             do_not_disturb=model.do_not_disturb,
             created_at=model.created_at,
@@ -98,7 +99,7 @@ class SQLAlchemyUserFriendsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, friend: UserFriend) -> UserFriend:
+    async def add(self, friend: UserFriend) -> UserFriend:  # type: ignore[override]
         model = UserFriendModel(
             id=friend.id,
             owner_tg_id=friend.owner_tg_id,
@@ -154,7 +155,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
         super().__init__(uow_factory)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def create(self, user: User) -> User:
+    async def create(self, user: User) -> User:  # type: ignore[override]
         self.logger.debug(
             {
                 "action": "SQLAlchemyUsersRepository.create",
@@ -267,7 +268,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def delete(self, telegram_id: int) -> None:
+    async def delete(self, telegram_id: int) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             result = await uow.session.execute(
                 delete(UserModel).where(UserModel.tg_id == telegram_id)

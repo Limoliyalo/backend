@@ -16,9 +16,14 @@ class ItemBackgroundPositionCreate(ItemBackgroundPositionBase):
 
 
 class ItemBackgroundPositionUpdate(BaseModel):
+    position_id: UUID = Field(..., description="Position ID")
     position_x: float = Field(..., description="X position")
     position_y: float = Field(..., description="Y position")
     position_z: float = Field(default=0.0, description="Z position")
+
+
+class ItemBackgroundPositionDelete(BaseModel):
+    position_id: UUID = Field(..., description="Position ID to delete")
 
 
 class ItemBackgroundPositionResponse(ItemBackgroundPositionBase):

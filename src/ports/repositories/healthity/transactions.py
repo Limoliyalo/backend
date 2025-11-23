@@ -29,3 +29,11 @@ class TransactionsRepository(ABC):
     @abstractmethod
     async def get(self, transaction_id: uuid.UUID) -> Transaction | None:
         raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, transaction: Transaction) -> Transaction:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, transaction_id: uuid.UUID) -> None:
+        raise NotImplementedError

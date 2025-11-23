@@ -74,7 +74,7 @@ class SQLAlchemyTransactionsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, transaction: Transaction) -> Transaction:
+    async def add(self, transaction: Transaction) -> Transaction:  # type: ignore[override]
         model = TransactionModel(
             id=transaction.id,
             user_tg_id=transaction.user_tg_id,
@@ -89,7 +89,7 @@ class SQLAlchemyTransactionsRepository(
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
 
-    async def get(self, transaction_id: uuid.UUID) -> Transaction | None:
+    async def get(self, transaction_id: uuid.UUID) -> Transaction | None:  # type: ignore[override]
         model = await super().get(transaction_id)
         if model is None:
             return None
@@ -109,7 +109,7 @@ class SQLAlchemyTransactionsRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, transaction_id: uuid.UUID) -> None:
+    async def delete(self, transaction_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(TransactionModel).where(TransactionModel.id == transaction_id)

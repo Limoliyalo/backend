@@ -1,7 +1,7 @@
 import logging
 
-from init_data_py import InitData
-from init_data_py import errors as init_data_errors
+from init_data_py import InitData  # type: ignore[import-untyped]
+from init_data_py import errors as init_data_errors  # type: ignore[import-untyped]
 
 from src.core.auth.schemas.tma import (
     TelegramAuthData,
@@ -27,9 +27,10 @@ class TelegramMiniAppAuth:
             user_obj = getattr(init_data, "user", None)
             user = None
             if user_obj is not None:
+                first_name = getattr(user_obj, "first_name", None)
                 user = TelegramUser(
                     id=user_obj.id,
-                    first_name=getattr(user_obj, "first_name", None),
+                    first_name=first_name if first_name is not None else "",
                     last_name=getattr(user_obj, "last_name", None),
                     username=getattr(user_obj, "username", None),
                     language_code=getattr(user_obj, "language_code", None),

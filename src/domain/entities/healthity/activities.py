@@ -16,7 +16,24 @@ class ActivityType:
 
 
 @dataclass
-class DailyActivity:
+class BaseCharacterActivity:
+    id: uuid.UUID
+    character_id: uuid.UUID
+    activity_type_id: uuid.UUID
+    goal: int = 1
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+
+    def touch(self) -> None:
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+@dataclass
+class CharacterActivityHistory:
     id: uuid.UUID
     character_id: uuid.UUID
     activity_type_id: uuid.UUID

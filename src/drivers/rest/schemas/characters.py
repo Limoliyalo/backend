@@ -28,6 +28,7 @@ class CharacterCreate(CharacterBase):
 
 
 class CharacterUpdate(BaseModel):
+    character_id: UUID = Field(..., description="Character ID")
     name: str | None = None
     sex: str | None = None
     current_mood: str | None = None
@@ -73,6 +74,10 @@ class CharacterUserUpdate(BaseModel):
         if v is not None and v not in ["male", "female", "other"]:
             raise ValueError("Sex must be one of: male, female, other")
         return v
+
+
+class CharacterDelete(BaseModel):
+    character_id: UUID = Field(..., description="Character ID to delete")
 
 
 class CharacterResponse(CharacterBase):

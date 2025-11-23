@@ -2,9 +2,10 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from src.domain.entities.healthity.activities import DailyActivity
+from src.domain.entities.healthity.activities import CharacterActivityHistory
 from src.domain.exceptions import EntityNotFoundException
 from src.ports.repositories.healthity.activities import (
+    BaseCharacterActivitiesRepository,
     DailyActivitiesRepository,
     ActivityTypesRepository,
 )
@@ -32,12 +33,25 @@ class CreateDailyActivityUseCase:
     def __init__(
         self,
         daily_activities_repository: DailyActivitiesRepository,
+        base_activities_repository: BaseCharacterActivitiesRepository,
         activity_types_repository: ActivityTypesRepository,
     ) -> None:
         self._daily_activities_repository = daily_activities_repository
+        self._base_activities_repository = base_activities_repository
         self._activity_types_repository = activity_types_repository
 
-    async def execute(self, data: CreateDailyActivityInput) -> DailyActivity:
+    async def execute(self, data: CreateDailyActivityInput) -> CharacterActivityHistory:
+        # Проверяем, есть ли активность в базовых активностях персонажа
+        base_activity = (
+            await self._base_activities_repository.get_by_character_and_type(
+                data.character_id, data.activity_type_id
+            )
+        )
+        if base_activity is None:
+            # Если активности нет в базе, не создаем запись в истории
+            raise EntityNotFoundException(
+                f"Activity type {data.activity_type_id} is not in character's base activities"
+            )
 
         date = data.date
         if date.tzinfo is not None:
@@ -54,32 +68,22 @@ class CreateDailyActivityUseCase:
         # Determine goal value based on logic:
         # 1. If user provided goal, use it
         # 2. If existing activity has goal, keep it
-        # 3. Otherwise, use default from activity type
+        # 3. Otherwise, use goal from base activity
         goal_value = data.goal
         if goal_value is None:
             if existing_activity:
                 goal_value = existing_activity.goal
             else:
-                # Get default goal from activity type
-                activity_type = await self._activity_types_repository.get_by_id(
-                    data.activity_type_id
-                )
-                if activity_type is None:
-                    raise EntityNotFoundException(
-                        f"ActivityType {data.activity_type_id} not found"
-                    )
-                goal_value = activity_type.daily_goal_default
+                goal_value = base_activity.goal
 
         if existing_activity:
-
             existing_activity.value += data.value
             existing_activity.goal = goal_value
             existing_activity.notes = data.notes
             existing_activity.touch()
             return await self._daily_activities_repository.update(existing_activity)
         else:
-
-            activity = DailyActivity(
+            activity = CharacterActivityHistory(
                 id=uuid.uuid4(),
                 character_id=data.character_id,
                 activity_type_id=data.activity_type_id,
@@ -97,7 +101,7 @@ class ListDailyActivitiesForDayUseCase:
 
     async def execute(
         self, character_id: uuid.UUID, day: datetime
-    ) -> list[DailyActivity]:
+    ) -> list[CharacterActivityHistory]:
 
         normalized_day = day
         if normalized_day.tzinfo is not None:
@@ -114,10 +118,12 @@ class GetDailyActivityUseCase:
     def __init__(self, daily_activities_repository: DailyActivitiesRepository) -> None:
         self._daily_activities_repository = daily_activities_repository
 
-    async def execute(self, activity_id: uuid.UUID) -> DailyActivity:
+    async def execute(self, activity_id: uuid.UUID) -> CharacterActivityHistory:
         activity = await self._daily_activities_repository.get_by_id(activity_id)
         if activity is None:
-            raise EntityNotFoundException(f"DailyActivity {activity_id} not found")
+            raise EntityNotFoundException(
+                f"CharacterActivityHistory {activity_id} not found"
+            )
         return activity
 
 
@@ -130,10 +136,12 @@ class UpdateDailyActivityUseCase:
         self._daily_activities_repository = daily_activities_repository
         self._activity_types_repository = activity_types_repository
 
-    async def execute(self, data: UpdateDailyActivityInput) -> DailyActivity:
+    async def execute(self, data: UpdateDailyActivityInput) -> CharacterActivityHistory:
         activity = await self._daily_activities_repository.get_by_id(data.activity_id)
         if activity is None:
-            raise EntityNotFoundException(f"DailyActivity {data.activity_id} not found")
+            raise EntityNotFoundException(
+                f"CharacterActivityHistory {data.activity_id} not found"
+            )
 
         if data.value is not None:
             activity.value = data.value
@@ -168,5 +176,7 @@ class DeleteDailyActivityUseCase:
     async def execute(self, activity_id: uuid.UUID) -> None:
         activity = await self._daily_activities_repository.get_by_id(activity_id)
         if activity is None:
-            raise EntityNotFoundException(f"DailyActivity {activity_id} not found")
+            raise EntityNotFoundException(
+                f"CharacterActivityHistory {activity_id} not found"
+            )
         await self._daily_activities_repository.delete(activity_id)

@@ -16,6 +16,7 @@ from src.adapters.repositories.exceptions import (
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.characters import (
     CharacterCreate,
+    CharacterDelete,
     CharacterResponse,
     CharacterUpdate,
     CharacterUserCreate,
@@ -106,10 +107,9 @@ async def create_character(
         raise BadRequestException(detail=str(e))
 
 
-@router.patch("/{character_id}/admin", response_model=CharacterResponse)
+@router.patch("/admin", response_model=CharacterResponse)
 @inject
 async def update_character(
-    character_id: UUID,
     data: CharacterUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateCharacterUseCase = Depends(
@@ -119,7 +119,7 @@ async def update_character(
     """Обновить персонажа (требуется админ-доступ)"""
     try:
         input_data = UpdateCharacterInput(
-            character_id=character_id,
+            character_id=data.character_id,
             name=data.name,
             sex=data.sex,
             current_mood=data.current_mood,
@@ -130,10 +130,10 @@ async def update_character(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{character_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_character(
-    character_id: UUID,
+    data: CharacterDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteCharacterUseCase = Depends(
         Provide[ApplicationContainer.delete_character_use_case]
@@ -141,7 +141,7 @@ async def delete_character(
 ):
     """Удалить персонажа (требуется админ-доступ)"""
     try:
-        await use_case.execute(character_id)
+        await use_case.execute(data.character_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 

@@ -218,7 +218,7 @@ class LoginUseCase:
 
         await self._token_manager.revoke_all(user.telegram_id)
 
-        claims = {"is_admin": user.is_admin}
+        claims: dict[str, object] = {"is_admin": user.is_admin}
         tokens = self._token_factory.create_tokens(
             subject=user.telegram_id,
             claims=claims,
@@ -271,7 +271,7 @@ class RefreshUseCase:
 
         await self._token_manager.revoke(token)
 
-        claims = {"is_admin": user.is_admin}
+        claims: dict[str, object] = {"is_admin": user.is_admin}
         tokens = self._token_factory.create_tokens(
             subject=user.telegram_id,
             claims=claims,

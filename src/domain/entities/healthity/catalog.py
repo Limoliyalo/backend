@@ -11,6 +11,12 @@ class ItemCategory:
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+
+    def touch(self) -> None:
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @dataclass
@@ -22,6 +28,7 @@ class Item:
     cost: int = 0
     required_level: int = 1
     is_available: bool = True
+    picture_url: str | None = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )
@@ -46,6 +53,7 @@ class Background:
     cost: int = 0
     required_level: int = 1
     is_available: bool = True
+    picture_url: str | None = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

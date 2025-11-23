@@ -23,6 +23,7 @@ class UserRegister(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    telegram_id: int = Field(..., gt=0, description="Telegram ID")
     password: str | None = Field(
         None, description="Новый пароль (будет автоматически захэширован)"
     )
@@ -57,6 +58,10 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(
         ..., min_length=6, description="Новый пароль (минимум 6 символов)"
     )
+
+
+class UserDelete(BaseModel):
+    telegram_id: int = Field(..., gt=0, description="Telegram ID to delete")
 
 
 class UserStatisticsResponse(BaseModel):

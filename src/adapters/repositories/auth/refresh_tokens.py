@@ -18,7 +18,7 @@ class SQLAlchemyRefreshTokensRepository(
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
-    async def create(self, token: RefreshToken) -> RefreshToken:
+    async def create(self, token: RefreshToken) -> RefreshToken:  # type: ignore[override]
         model = RefreshTokenModel(
             id=token.id,
             user_tg_id=token.user_tg_id,
@@ -60,11 +60,13 @@ class SQLAlchemyRefreshTokensRepository(
 
     @staticmethod
     def _to_domain(model: RefreshTokenModel) -> RefreshToken:
+        import uuid
+
         return RefreshToken(
-            id=model.id,
+            id=uuid.UUID(str(model.id)),
             user_tg_id=model.user_tg_id,
             token_hash=model.token_hash,
-            jti=model.jti,
+            jti=uuid.UUID(str(model.jti)),
             expires_at=model.expires_at,
             revoked=model.revoked,
             created_at=model.created_at,

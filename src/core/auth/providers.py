@@ -95,7 +95,7 @@ class CurrentUserProvider:
             raise _unauthorized("Invalid subject claim") from exc
 
 
-def _unauthorized(msg: str):
+def _raise_unauthorized(msg: str) -> None:
     from fastapi import HTTPException, status
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=msg)
@@ -129,16 +129,19 @@ class TelegramMiniAppAuthProvider:
     async def __call__(self, request: Request) -> TelegramAuthData:
         authorization = request.headers.get("authorization")
         if not authorization:
-            _unauthorized("Missing Authorization header")
+            _raise_unauthorized("Missing Authorization header")
+            return  # type: ignore[return-value]
 
         init_data_raw = self._extract_init_data(authorization)
         if not init_data_raw:
-            _unauthorized("Empty init data")
+            _raise_unauthorized("Empty init data")
+            return  # type: ignore[return-value]
 
         try:
             return self._tma_auth.validate_init_data(init_data_raw)
         except InvalidTokenException as exc:
-            _unauthorized(str(exc))
+            _raise_unauthorized(str(exc))
+            return  # type: ignore[return-value]
 
 
 class TelegramMiniAppCurrentUserProvider:
@@ -159,4 +162,5 @@ class TelegramMiniAppCurrentUserProvider:
         try:
             return self._tma_auth.get_telegram_id(auth_data)
         except InvalidTokenException as exc:
-            raise _unauthorized(str(exc)) from exc
+            _raise_unauthorized(str(exc))
+            return  # type: ignore[return-value]

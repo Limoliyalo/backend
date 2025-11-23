@@ -16,6 +16,7 @@ from src.adapters.repositories.healthity.characters import (
 )
 from src.adapters.repositories.healthity.activities import (
     SQLAlchemyActivityTypesRepository,
+    SQLAlchemyBaseCharacterActivitiesRepository,
     SQLAlchemyDailyActivitiesRepository,
     SQLAlchemyDailyProgressRepository,
     SQLAlchemyMoodHistoryRepository,
@@ -36,6 +37,7 @@ __all__ = [
     "SQLAlchemyCharacterBackgroundsRepository",
     "SQLAlchemyItemBackgroundPositionsRepository",
     "SQLAlchemyActivityTypesRepository",
+    "SQLAlchemyBaseCharacterActivitiesRepository",
     "SQLAlchemyDailyActivitiesRepository",
     "SQLAlchemyDailyProgressRepository",
     "SQLAlchemyMoodHistoryRepository",

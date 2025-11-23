@@ -11,6 +11,7 @@ from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
     MoodHistoryCreate,
+    MoodHistoryDelete,
     MoodHistoryResponse,
     MoodHistoryUpdate,
 )
@@ -91,13 +92,12 @@ async def create_mood_history(
 
 
 @router.patch(
-    "/{mood_history_id}/admin",
+    "/admin",
     response_model=MoodHistoryResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def update_mood_history(
-    mood_history_id: UUID,
     data: MoodHistoryUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateMoodHistoryUseCase = Depends(
@@ -107,7 +107,7 @@ async def update_mood_history(
     """Обновить запись о настроении (требуется админ-доступ)"""
     try:
         input_data = UpdateMoodHistoryInput(
-            mood_history_id=mood_history_id,
+            mood_history_id=data.mood_history_id,
             mood=data.mood,
             trigger=data.trigger,
         )
@@ -117,10 +117,10 @@ async def update_mood_history(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{mood_history_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_mood_history(
-    mood_history_id: UUID,
+    data: MoodHistoryDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.delete_mood_history_use_case]
@@ -128,7 +128,7 @@ async def delete_mood_history(
 ):
     """Удалить запись о настроении (требуется админ-доступ)"""
     try:
-        await use_case.execute(mood_history_id)
+        await use_case.execute(data.mood_history_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -187,6 +187,8 @@ async def get_my_mood_history(
             mood_history = await mood_repo.list_for_date_range(character.id, day, day)
         else:
             # Получаем историю настроения за диапазон дат
+            # Проверка гарантирует, что start_date и end_date не None
+            assert start_date is not None and end_date is not None
             mood_history = await mood_repo.list_for_date_range(
                 character.id, start_date, end_date
             )

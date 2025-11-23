@@ -9,6 +9,7 @@ from src.adapters.repositories.auth import (
 from src.adapters.repositories.healthity import (
     SQLAlchemyActivityTypesRepository,
     SQLAlchemyBackgroundsRepository,
+    SQLAlchemyBaseCharacterActivitiesRepository,
     SQLAlchemyCharacterBackgroundsRepository,
     SQLAlchemyCharacterItemsRepository,
     SQLAlchemyCharactersRepository,
@@ -94,6 +95,13 @@ from src.use_cases.activity_types.manage_activity_types import (
     ListActivityTypesUseCase,
     UpdateActivityTypeUseCase,
 )
+from src.use_cases.base_character_activities.manage_base_character_activities import (
+    CreateBaseCharacterActivityUseCase,
+    DeleteBaseCharacterActivityUseCase,
+    GetBaseCharacterActivityUseCase,
+    ListBaseCharacterActivitiesUseCase,
+    UpdateBaseCharacterActivityUseCase,
+)
 from src.use_cases.daily_activities.manage_daily_activities import (
     CreateDailyActivityUseCase,
     DeleteDailyActivityUseCase,
@@ -119,6 +127,7 @@ from src.use_cases.mood_history.manage_mood_history import (
 )
 from src.use_cases.user_friends.manage_user_friends import (
     AddFriendUseCase,
+    CheckMutualFriendshipUseCase,
     GetUserFriendUseCase,
     ListUserFriendsUseCase,
     RemoveFriendUseCase,
@@ -131,7 +140,7 @@ from src.use_cases.character_items.manage_character_items import (
     PurchaseItemUseCase,
     PurchaseItemWithBalanceUseCase,
     RemoveCharacterItemUseCase,
-    ToggleFavouriteItemUseCase,
+    ToggleFavoriteItemUseCase,
     UnequipItemUseCase,
     UpdateCharacterItemUseCase,
 )
@@ -143,7 +152,7 @@ from src.use_cases.character_backgrounds.manage_character_backgrounds import (
     PurchaseBackgroundUseCase,
     PurchaseBackgroundWithBalanceUseCase,
     RemoveCharacterBackgroundUseCase,
-    ToggleFavouriteBackgroundUseCase,
+    ToggleFavoriteBackgroundUseCase,
     UpdateCharacterBackgroundUseCase,
 )
 from src.use_cases.item_categories.manage_item_categories import (
@@ -221,6 +230,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     daily_activities_repository = providers.Factory(
         SQLAlchemyDailyActivitiesRepository, uow_factory=unit_of_work.provider
+    )
+    base_character_activities_repository = providers.Factory(
+        SQLAlchemyBaseCharacterActivitiesRepository, uow_factory=unit_of_work.provider
     )
     daily_progress_repository = providers.Factory(
         SQLAlchemyDailyProgressRepository, uow_factory=unit_of_work.provider
@@ -439,6 +451,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     create_daily_activity_use_case = providers.Factory(
         CreateDailyActivityUseCase,
         daily_activities_repository=daily_activities_repository,
+        base_activities_repository=base_character_activities_repository,
         activity_types_repository=activity_types_repository,
     )
     list_daily_activities_for_day_use_case = providers.Factory(
@@ -457,6 +470,28 @@ class ApplicationContainer(containers.DeclarativeContainer):
     delete_daily_activity_use_case = providers.Factory(
         DeleteDailyActivityUseCase,
         daily_activities_repository=daily_activities_repository,
+    )
+
+    list_base_character_activities_use_case = providers.Factory(
+        ListBaseCharacterActivitiesUseCase,
+        base_activities_repository=base_character_activities_repository,
+    )
+    get_base_character_activity_use_case = providers.Factory(
+        GetBaseCharacterActivityUseCase,
+        base_activities_repository=base_character_activities_repository,
+    )
+    create_base_character_activity_use_case = providers.Factory(
+        CreateBaseCharacterActivityUseCase,
+        base_activities_repository=base_character_activities_repository,
+        activity_types_repository=activity_types_repository,
+    )
+    update_base_character_activity_use_case = providers.Factory(
+        UpdateBaseCharacterActivityUseCase,
+        base_activities_repository=base_character_activities_repository,
+    )
+    delete_base_character_activity_use_case = providers.Factory(
+        DeleteBaseCharacterActivityUseCase,
+        base_activities_repository=base_character_activities_repository,
     )
 
     create_daily_progress_use_case = providers.Factory(
@@ -522,6 +557,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     remove_friend_use_case = providers.Factory(
         RemoveFriendUseCase, user_friends_repository=user_friends_repository
     )
+    check_mutual_friendship_use_case = providers.Factory(
+        CheckMutualFriendshipUseCase, user_friends_repository=user_friends_repository
+    )
 
     list_character_items_use_case = providers.Factory(
         ListCharacterItemsUseCase, character_items_repository=character_items_repository
@@ -548,9 +586,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
         UnequipItemUseCase,
         character_items_repository=character_items_repository,
     )
-    toggle_favourite_item_use_case = providers.Factory(
-        ToggleFavouriteItemUseCase,
+    toggle_favorite_item_use_case = providers.Factory(
+        ToggleFavoriteItemUseCase,
         character_items_repository=character_items_repository,
+        items_repository=items_repository,
     )
     purchase_item_with_balance_use_case = providers.Factory(
         PurchaseItemWithBalanceUseCase,
@@ -588,9 +627,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
         UnequipBackgroundUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
     )
-    toggle_favourite_background_use_case = providers.Factory(
-        ToggleFavouriteBackgroundUseCase,
+    toggle_favorite_background_use_case = providers.Factory(
+        ToggleFavoriteBackgroundUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
+        backgrounds_repository=backgrounds_repository,
     )
     purchase_background_with_balance_use_case = providers.Factory(
         PurchaseBackgroundWithBalanceUseCase,

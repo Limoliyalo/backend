@@ -10,6 +10,7 @@ from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.activities import (
     ActivityTypeCreate,
+    ActivityTypeDelete,
     ActivityTypeResponse,
     ActivityTypeUpdate,
 )
@@ -91,13 +92,12 @@ async def create_activity_type(
 
 
 @router.patch(
-    "/{activity_type_id}/admin",
+    "/admin",
     response_model=ActivityTypeResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def update_activity_type(
-    activity_type_id: UUID,
     data: ActivityTypeUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateActivityTypeUseCase = Depends(
@@ -107,7 +107,7 @@ async def update_activity_type(
     """Обновить тип активности (требуется админ-доступ)"""
     try:
         input_data = UpdateActivityTypeInput(
-            activity_type_id=activity_type_id,
+            activity_type_id=data.activity_type_id,
             name=data.name,
             unit=data.unit,
             color=data.color,
@@ -119,10 +119,10 @@ async def update_activity_type(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{activity_type_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_activity_type(
-    activity_type_id: UUID,
+    data: ActivityTypeDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteActivityTypeUseCase = Depends(
         Provide[ApplicationContainer.delete_activity_type_use_case]
@@ -130,7 +130,7 @@ async def delete_activity_type(
 ):
     """Удалить тип активности (требуется админ-доступ)"""
     try:
-        await use_case.execute(activity_type_id)
+        await use_case.execute(data.activity_type_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 

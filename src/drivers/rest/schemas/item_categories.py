@@ -13,7 +13,11 @@ class ItemCategoryCreate(ItemCategoryBase):
 
 
 class ItemCategoryUpdate(ItemCategoryBase):
-    pass
+    category_id: UUID = Field(..., description="Category ID")
+
+
+class ItemCategoryDelete(BaseModel):
+    category_id: UUID = Field(..., description="Category ID to delete")
 
 
 class ItemCategoryResponse(ItemCategoryBase):

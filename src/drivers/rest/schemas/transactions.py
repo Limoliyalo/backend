@@ -17,9 +17,14 @@ class TransactionCreate(TransactionBase):
 
 
 class TransactionUpdate(BaseModel):
+    transaction_id: UUID = Field(..., description="Transaction ID")
     amount: int | None = None
     type: str | None = None
     description: str | None = None
+
+
+class TransactionDelete(BaseModel):
+    transaction_id: UUID = Field(..., description="Transaction ID to delete")
 
 
 class TransactionResponse(TransactionBase):
