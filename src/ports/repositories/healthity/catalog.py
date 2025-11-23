@@ -22,6 +22,10 @@ class ItemCategoriesRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def update(self, category: ItemCategory) -> ItemCategory:
+        raise NotImplementedError
+
+    @abstractmethod
     async def delete(self, category_id: uuid.UUID) -> None:
         raise NotImplementedError
 

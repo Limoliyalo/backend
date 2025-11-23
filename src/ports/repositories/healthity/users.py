@@ -1,22 +1,30 @@
 from abc import ABC, abstractmethod
+import uuid
 
 from src.domain.entities.healthity.users import User, UserFriend, UserSettings
-from src.domain.value_objects.telegram_id import TelegramId
 
 
 class UserSettingsRepository(ABC):
     @abstractmethod
-    async def get_by_user(self, user_tg_id: TelegramId) -> UserSettings | None:
+    async def get_by_user(self, user_tg_id: int) -> UserSettings | None:
         raise NotImplementedError
 
     @abstractmethod
     async def upsert(self, settings: UserSettings) -> UserSettings:
         raise NotImplementedError
 
+    @abstractmethod
+    async def list_all(self) -> list[UserSettings]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, settings_id: uuid.UUID) -> None:
+        raise NotImplementedError
+
 
 class UserFriendsRepository(ABC):
     @abstractmethod
-    async def list_for_user(self, owner_tg_id: TelegramId) -> list[UserFriend]:
+    async def list_for_user(self, owner_tg_id: int) -> list[UserFriend]:
         raise NotImplementedError
 
     @abstractmethod
@@ -24,7 +32,15 @@ class UserFriendsRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def remove(self, owner_tg_id: TelegramId, friend_tg_id: TelegramId) -> None:
+    async def remove(self, owner_tg_id: int, friend_tg_id: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, friend_id: uuid.UUID) -> UserFriend | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, friend: UserFriend) -> UserFriend:
         raise NotImplementedError
 
 
@@ -34,7 +50,7 @@ class UsersRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_telegram_id(self, telegram_id: TelegramId) -> User | None:
+    async def get_by_telegram_id(self, telegram_id: int) -> User | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -46,5 +62,5 @@ class UsersRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete(self, telegram_id: TelegramId) -> None:
+    async def delete(self, telegram_id: int) -> None:
         raise NotImplementedError

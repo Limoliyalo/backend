@@ -2,7 +2,6 @@ import uuid
 
 from src.domain.entities.healthity.characters import Character
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.characters import CharactersRepository
 
 
@@ -22,9 +21,7 @@ class GetCharacterByUserUseCase:
         self._characters_repository = characters_repository
 
     async def execute(self, user_tg_id: int) -> Character:
-        character = await self._characters_repository.get_by_user(
-            TelegramId(user_tg_id)
-        )
+        character = await self._characters_repository.get_by_user(user_tg_id)
         if character is None:
             raise EntityNotFoundException(f"Character for user {user_tg_id} not found")
         return character

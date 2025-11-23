@@ -10,6 +10,7 @@ from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_background_positions import (
     ItemBackgroundPositionCreate,
+    ItemBackgroundPositionDelete,
     ItemBackgroundPositionResponse,
     ItemBackgroundPositionUpdate,
 )
@@ -97,13 +98,12 @@ async def create_position(
 
 
 @router.put(
-    "/{position_id}/admin",
+    "/admin",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def update_position(
-    position_id: UUID,
     data: ItemBackgroundPositionUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdatePositionUseCase = Depends(
@@ -113,7 +113,7 @@ async def update_position(
     """Обновить позицию (требуется админ-доступ)"""
     try:
         input_data = UpdatePositionInput(
-            position_id=position_id,
+            position_id=data.position_id,
             position_x=data.position_x,
             position_y=data.position_y,
             position_z=data.position_z,
@@ -124,10 +124,10 @@ async def update_position(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{position_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_position(
-    position_id: UUID,
+    data: ItemBackgroundPositionDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeletePositionUseCase = Depends(
         Provide[ApplicationContainer.delete_position_use_case]
@@ -135,6 +135,6 @@ async def delete_position(
 ):
     """Удалить позицию (требуется админ-доступ)"""
     try:
-        await use_case.execute(position_id)
+        await use_case.execute(data.position_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))

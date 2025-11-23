@@ -2,13 +2,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID
 
-from src.domain.value_objects.telegram_id import TelegramId
-
 
 @dataclass
 class RefreshToken:
     id: UUID
-    user_tg_id: TelegramId
+    user_tg_id: int
     token_hash: str
     jti: UUID
     expires_at: datetime

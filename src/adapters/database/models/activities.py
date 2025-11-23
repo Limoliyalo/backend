@@ -39,17 +39,15 @@ class ActivityTypeModel(Base):
     )
 
 
-class DailyActivityModel(TimestampMixin, Base):
-    __tablename__ = "daily_activities"
+class BaseCharacterActivityModel(TimestampMixin, Base):
+    __tablename__ = "base_character_activities"
     __table_args__ = (
         UniqueConstraint(
-            "character_id", "activity_type_id", "date", name="uq_daily_activity"
+            "character_id", "activity_type_id", name="uq_base_character_activity"
         ),
-        Index("idx_daily_activities_character_date", "character_id", "date"),
-        Index("idx_daily_activities_type", "activity_type_id"),
-        Index("idx_daily_activities_date", "date"),
-        CheckConstraint("value >= 0", name="ck_daily_activities_value_non_negative"),
-        CheckConstraint("goal > 0", name="ck_daily_activities_goal_positive"),
+        Index("idx_base_character_activities_character", "character_id"),
+        Index("idx_base_character_activities_type", "activity_type_id"),
+        CheckConstraint("goal > 0", name="ck_base_character_activities_goal_positive"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -64,7 +62,43 @@ class DailyActivityModel(TimestampMixin, Base):
     )
     activity_type_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("activity_types.id", ondelete="RESTRICT"),
+        ForeignKey("activity_types.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    goal: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class CharacterActivityHistoryModel(TimestampMixin, Base):
+    __tablename__ = "character_activity_history"
+    __table_args__ = (
+        UniqueConstraint(
+            "character_id",
+            "activity_type_id",
+            "date",
+            name="uq_character_activity_history",
+        ),
+        Index("idx_character_activity_history_character_date", "character_id", "date"),
+        Index("idx_character_activity_history_type", "activity_type_id"),
+        Index("idx_character_activity_history_date", "date"),
+        CheckConstraint(
+            "value >= 0", name="ck_character_activity_history_value_non_negative"
+        ),
+        CheckConstraint("goal > 0", name="ck_character_activity_history_goal_positive"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    character_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("characters.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    activity_type_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("activity_types.id", ondelete="CASCADE"),
         nullable=False,
     )
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)

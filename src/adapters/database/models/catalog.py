@@ -71,6 +71,7 @@ class ItemModel(TimestampMixin, Base):
         nullable=False,
         server_default=text("true"),
     )
+    picture_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
 
 class BackgroundModel(Base):
@@ -103,6 +104,7 @@ class BackgroundModel(Base):
         nullable=False,
         server_default=text("true"),
     )
+    picture_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

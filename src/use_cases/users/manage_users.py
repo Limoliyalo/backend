@@ -7,7 +7,6 @@ from src.core.settings import get_settings
 from src.domain.entities.healthity.transactions import Transaction
 from src.domain.entities.healthity.users import User
 from src.domain.exceptions import UserNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.transactions import TransactionsRepository
 from src.ports.repositories.healthity.users import UsersRepository
 
@@ -42,7 +41,7 @@ class GetUserUseCase:
             }
         )
 
-        user = await self._users_repository.get_by_telegram_id(TelegramId(telegram_id))
+        user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None:
             self.logger.warning(
@@ -90,7 +89,7 @@ class CreateUserUseCase:
             }
         )
 
-        telegram_id = TelegramId(data.telegram_id)
+        telegram_id = data.telegram_id
 
         self.logger.debug(
             {
@@ -189,7 +188,7 @@ class UpdateUserUseCase:
         self._password_hasher = password_hasher
 
     async def execute(self, data: UpdateUserInput) -> User:
-        telegram_id = TelegramId(data.telegram_id)
+        telegram_id = data.telegram_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None:
@@ -217,10 +216,10 @@ class DeleteUserUseCase:
         self._users_repository = users_repository
 
     async def execute(self, telegram_id: int) -> None:
-        user = await self._users_repository.get_by_telegram_id(TelegramId(telegram_id))
+        user = await self._users_repository.get_by_telegram_id(telegram_id)
         if user is None:
             raise UserNotFoundException(telegram_id)
-        await self._users_repository.delete(TelegramId(telegram_id))
+        await self._users_repository.delete(telegram_id)
 
 
 @dataclass
@@ -249,7 +248,7 @@ class DepositUseCase:
             }
         )
 
-        telegram_id = TelegramId(data.telegram_id)
+        telegram_id = data.telegram_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None:
@@ -308,7 +307,7 @@ class WithdrawUseCase:
             }
         )
 
-        telegram_id = TelegramId(data.telegram_id)
+        telegram_id = data.telegram_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None:
@@ -367,7 +366,7 @@ class ChangePasswordUseCase:
             }
         )
 
-        telegram_id = TelegramId(data.telegram_id)
+        telegram_id = data.telegram_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None:

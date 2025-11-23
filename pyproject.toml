@@ -1,6 +1,9 @@
 [tool.poetry]
 package-mode = false
 
+[tool.poetry.group.dev.dependencies]
+types-python-jose = "^3.5.0.20250531"
+
 [project]
 name = "healthity-backend-service"
 version = "1.0.0"
@@ -23,6 +26,7 @@ dependencies = [
     "bcrypt (>=4.0.0,<5.0.0)",
     "python-jose[cryptography] (>=3.3.0,<4.0.0)",
     "init-data-py (>=0.2.6,<0.3.0)",
+    "mypy (>=1.18.2,<2.0.0)",
 ]
 
 

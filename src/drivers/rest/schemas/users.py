@@ -1,9 +1,6 @@
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-from src.domain.value_objects.telegram_id import TelegramId
 
 
 class UserBase(BaseModel):
@@ -22,10 +19,21 @@ class UserRegister(BaseModel):
     """Публичная регистрация - только telegram_id и пароль"""
 
     telegram_id: int = Field(..., gt=0, description="Telegram ID пользователя")
-    password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
+    password: str | None = Field(
+        None, description="Пароль (минимум 6 символов, опционально)"
+    )
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str | None) -> str | None:
+        """Валидация пароля: если передан, должен быть минимум 6 символов"""
+        if v is not None and len(v) < 6:
+            raise ValueError("Пароль должен содержать минимум 6 символов")
+        return v
 
 
 class UserUpdate(BaseModel):
+    telegram_id: int = Field(..., gt=0, description="Telegram ID")
     password: str | None = Field(
         None, description="Новый пароль (будет автоматически захэширован)"
     )
@@ -39,14 +47,6 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-    @field_validator("telegram_id", mode="before")
-    @classmethod
-    def validate_telegram_id(cls, v: Any) -> int:
-        """Преобразует TelegramId value object в int перед валидацией"""
-        if isinstance(v, TelegramId):
-            return v.value
-        return v
 
 
 class DepositRequest(BaseModel):
@@ -68,6 +68,10 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(
         ..., min_length=6, description="Новый пароль (минимум 6 символов)"
     )
+
+
+class UserDelete(BaseModel):
+    telegram_id: int = Field(..., gt=0, description="Telegram ID to delete")
 
 
 class UserStatisticsResponse(BaseModel):

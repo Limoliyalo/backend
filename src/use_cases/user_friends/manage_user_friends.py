@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from src.domain.entities.healthity.users import UserFriend
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.users import UserFriendsRepository
 
 
@@ -18,9 +17,7 @@ class ListUserFriendsUseCase:
         self._user_friends_repository = user_friends_repository
 
     async def execute(self, owner_tg_id: int) -> list[UserFriend]:
-        return await self._user_friends_repository.list_for_user(
-            TelegramId(owner_tg_id)
-        )
+        return await self._user_friends_repository.list_for_user(owner_tg_id)
 
 
 class GetUserFriendUseCase:
@@ -41,8 +38,8 @@ class AddFriendUseCase:
     async def execute(self, data: AddFriendInput) -> UserFriend:
         friend = UserFriend(
             id=uuid.uuid4(),
-            owner_tg_id=TelegramId(data.owner_tg_id),
-            friend_tg_id=TelegramId(data.friend_tg_id),
+            owner_tg_id=data.owner_tg_id,
+            friend_tg_id=data.friend_tg_id,
         )
         return await self._user_friends_repository.add(friend)
 
@@ -62,7 +59,7 @@ class UpdateUserFriendUseCase:
         if friend is None:
             raise EntityNotFoundException(f"UserFriend {data.friend_id} not found")
 
-        friend.friend_tg_id = TelegramId(data.friend_tg_id)
+        friend.friend_tg_id = data.friend_tg_id
         return await self._user_friends_repository.update(friend)
 
 
@@ -71,6 +68,27 @@ class RemoveFriendUseCase:
         self._user_friends_repository = user_friends_repository
 
     async def execute(self, owner_tg_id: int, friend_tg_id: int) -> None:
-        await self._user_friends_repository.remove(
-            TelegramId(owner_tg_id), TelegramId(friend_tg_id)
-        )
+        await self._user_friends_repository.remove(owner_tg_id, friend_tg_id)
+
+
+class CheckMutualFriendshipUseCase:
+    """Проверяет взаимную дружбу между двумя пользователями"""
+
+    def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
+        self._user_friends_repository = user_friends_repository
+
+    async def execute(self, user1_tg_id: int, user2_tg_id: int) -> bool:
+        """
+        Проверяет, что обе стороны добавили друг друга в друзья.
+        Возвращает True только если user1 добавил user2 И user2 добавил user1.
+        """
+        # Проверяем, что user1 добавил user2
+        user1_friends = await self._user_friends_repository.list_for_user(user1_tg_id)
+        user1_added_user2 = any(f.friend_tg_id == user2_tg_id for f in user1_friends)
+
+        # Проверяем, что user2 добавил user1
+        user2_friends = await self._user_friends_repository.list_for_user(user2_tg_id)
+        user2_added_user1 = any(f.friend_tg_id == user1_tg_id for f in user2_friends)
+
+        # Возвращаем True только если обе стороны добавили друг друга
+        return user1_added_user2 and user2_added_user1

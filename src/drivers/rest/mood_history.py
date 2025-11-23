@@ -7,13 +7,14 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
     MoodHistoryCreate,
+    MoodHistoryDelete,
     MoodHistoryResponse,
     MoodHistoryUpdate,
+    MoodHistoryUserCreate,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.ports.repositories.healthity.activities import MoodHistoryRepository
@@ -92,13 +93,12 @@ async def create_mood_history(
 
 
 @router.patch(
-    "/{mood_history_id}/admin",
+    "/admin",
     response_model=MoodHistoryResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def update_mood_history(
-    mood_history_id: UUID,
     data: MoodHistoryUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateMoodHistoryUseCase = Depends(
@@ -108,7 +108,7 @@ async def update_mood_history(
     """Обновить запись о настроении (требуется админ-доступ)"""
     try:
         input_data = UpdateMoodHistoryInput(
-            mood_history_id=mood_history_id,
+            mood_history_id=data.mood_history_id,
             mood=data.mood,
             trigger=data.trigger,
         )
@@ -118,10 +118,10 @@ async def update_mood_history(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{mood_history_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_mood_history(
-    mood_history_id: UUID,
+    data: MoodHistoryDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteMoodHistoryUseCase = Depends(
         Provide[ApplicationContainer.delete_mood_history_use_case]
@@ -129,7 +129,7 @@ async def delete_mood_history(
 ):
     """Удалить запись о настроении (требуется админ-доступ)"""
     try:
-        await use_case.execute(mood_history_id)
+        await use_case.execute(data.mood_history_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -148,7 +148,7 @@ async def get_my_mood_history(
     end_date: datetime | None = Query(
         None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -181,13 +181,15 @@ async def get_my_mood_history(
         )
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         if day is not None:
             # Получаем историю настроения за конкретный день
             mood_history = await mood_repo.list_for_date_range(character.id, day, day)
         else:
             # Получаем историю настроения за диапазон дат
+            # Проверка гарантирует, что start_date и end_date не None
+            assert start_date is not None and end_date is not None
             mood_history = await mood_repo.list_for_date_range(
                 character.id, start_date, end_date
             )
@@ -202,9 +204,8 @@ async def get_my_mood_history(
 )
 @inject
 async def create_my_mood_entry(
-    mood: str = Query(..., description="Настроение"),
-    trigger: str | None = Query(None, description="Триггер"),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    data: MoodHistoryUserCreate,
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -215,12 +216,12 @@ async def create_my_mood_entry(
     """Создать запись о настроении для текущего пользователя"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = CreateMoodHistoryInput(
             character_id=character.id,
-            mood=mood,
-            trigger=trigger,
+            mood=data.mood,
+            trigger=data.trigger,
         )
         mood_history = await use_case.execute(input_data)
         return MoodHistoryResponse.model_validate(mood_history)

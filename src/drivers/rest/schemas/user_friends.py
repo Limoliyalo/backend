@@ -4,8 +4,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.domain.value_objects.telegram_id import TelegramId
-
 
 class UserFriendBase(BaseModel):
     owner_tg_id: int = Field(..., gt=0, description="Owner Telegram ID")
@@ -13,10 +11,18 @@ class UserFriendBase(BaseModel):
 
 
 class UserFriendCreate(BaseModel):
+    owner_tg_id: int = Field(..., gt=0, description="Owner Telegram ID")
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
+
+
+class UserFriendUserCreate(BaseModel):
+    """Схема для создания друга пользователем (без owner_tg_id)"""
+
     friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
 class UserFriendUpdate(BaseModel):
+    friend_id: UUID = Field(..., description="Friend ID")
     friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID")
 
 
@@ -29,7 +35,28 @@ class UserFriendResponse(UserFriendBase):
     @field_validator("owner_tg_id", "friend_tg_id", mode="before")
     @classmethod
     def validate_telegram_ids(cls, v: Any) -> int:
-        """Преобразует TelegramId value object в int перед валидацией"""
-        if isinstance(v, TelegramId):
-            return v.value
+        """Валидатор для owner_tg_id"""
         return v
+
+
+class UserFriendDelete(BaseModel):
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID to delete")
+
+
+class UserFriendAdminDelete(BaseModel):
+    owner_tg_id: int = Field(..., gt=0, description="Owner Telegram ID")
+    friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID to delete")
+
+
+class FriendInfoResponse(BaseModel):
+    """Полная информация о друге"""
+
+    user_tg_id: int
+    character: dict | None = None
+    character_items: list[dict] = Field(default_factory=list)
+    character_backgrounds: list[dict] = Field(default_factory=list)
+    base_activities: list[dict] = Field(default_factory=list)
+    mood_history: list[dict] = Field(default_factory=list)
+    transactions: list[dict] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)

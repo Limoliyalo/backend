@@ -7,14 +7,15 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
     DailyActivityCreate,
+    DailyActivityDelete,
     DailyActivityResponse,
     DailyActivityUpdate,
+    DailyActivityUserCreate,
 )
 from src.ports.repositories.healthity.activities import DailyActivitiesRepository
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
@@ -103,10 +104,9 @@ async def create_daily_activity(
         raise BadRequestException(detail=str(e))
 
 
-@router.patch("/{activity_id}/admin", response_model=DailyActivityResponse)
+@router.patch("/admin", response_model=DailyActivityResponse)
 @inject
 async def update_daily_activity(
-    activity_id: UUID,
     data: DailyActivityUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateDailyActivityUseCase = Depends(
@@ -116,7 +116,7 @@ async def update_daily_activity(
     """Обновить дневную активность (требуется админ-доступ)"""
     try:
         input_data = UpdateDailyActivityInput(
-            activity_id=activity_id,
+            activity_id=data.activity_id,
             value=data.value,
             goal=data.goal,
             notes=data.notes,
@@ -129,10 +129,10 @@ async def update_daily_activity(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{activity_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_daily_activity(
-    activity_id: UUID,
+    data: DailyActivityDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.delete_daily_activity_use_case]
@@ -140,7 +140,7 @@ async def delete_daily_activity(
 ):
     """Удалить дневную активность (требуется админ-доступ)"""
     try:
-        await use_case.execute(activity_id)
+        await use_case.execute(data.activity_id)
     except RepositoryError as e:
         raise BadRequestException(detail=str(e))
     except EntityNotFoundException as e:
@@ -161,7 +161,7 @@ async def list_my_daily_activities(
     end_date: datetime | None = Query(
         None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -176,7 +176,7 @@ async def list_my_daily_activities(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         if start_date and end_date:
             activities = await activities_repo.list_for_date_range(
@@ -199,18 +199,8 @@ async def list_my_daily_activities(
 )
 @inject
 async def create_my_daily_activity(
-    activity_type_id: UUID = Query(..., description="ID типа активности"),
-    date: datetime = Query(
-        ..., description="Дата активности", example="2025-10-25 16:35:24"
-    ),
-    value: int = Query(0, ge=0, description="Значение активности"),
-    goal: int | None = Query(
-        None,
-        ge=1,
-        description="Цель активности (если не указана, будет использована цель из типа активности)",
-    ),
-    notes: str | None = Query(None, description="Заметки"),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    data: DailyActivityUserCreate,
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -222,15 +212,15 @@ async def create_my_daily_activity(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = CreateDailyActivityInput(
             character_id=character.id,
-            activity_type_id=activity_type_id,
-            date=date,
-            value=value,
-            goal=goal,
-            notes=notes,
+            activity_type_id=data.activity_type_id,
+            date=data.date,
+            value=data.value,
+            goal=data.goal,
+            notes=data.notes,
         )
         activity = await use_case.execute(input_data)
         return DailyActivityResponse.model_validate(activity)
@@ -240,12 +230,11 @@ async def create_my_daily_activity(
         raise BadRequestException(detail=str(e))
 
 
-@router.patch("/{activity_id}/me", response_model=DailyActivityResponse)
+@router.patch("/me", response_model=DailyActivityResponse)
 @inject
 async def update_my_daily_activity(
-    activity_id: UUID,
     data: DailyActivityUpdate,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -260,14 +249,14 @@ async def update_my_daily_activity(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
-        activity = await get_activity_use_case.execute(activity_id)
+        activity = await get_activity_use_case.execute(data.activity_id)
         if activity.character_id != character.id:
             raise BadRequestException(detail="You can only update your own activities")
 
         input_data = UpdateDailyActivityInput(
-            activity_id=activity_id,
+            activity_id=data.activity_id,
             value=data.value,
             goal=data.goal,
             notes=data.notes,

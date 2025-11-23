@@ -4,21 +4,25 @@
 
 ## 📖 Документация API
 
-Полная документация API доступна в файле [API_DOCUMENTATION.md](src/drivers/rest/API_DOCUMENTATION.md).
+Полная документация API доступна в файле [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
 **Интерактивная документация:**
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
 **Основные endpoints:**
-- 🔐 Аутентификация: `/api/v1/auth/*`
-- 👤 Пользователи: `/api/v1/users/*`
-- 🎮 Персонажи: `/api/v1/characters/*`
-- 🛍️ Каталоги (открытые): `/api/v1/{items,backgrounds,activity-types}/catalog`
-- 💰 Покупки: `/api/v1/character-{items,backgrounds}/purchase`
-- 📊 Активности: `/api/v1/daily-activities/*`
+- 🔐 Аутентификация: `/api/v1/auth/telegram/*` (Telegram Mini App)
+- 👤 Пользователи: `/api/v1/users/*` (регистрация, `/me`, админские)
+- 🎮 Персонажи: `/api/v1/characters/*` (`/me`, админские)
+- 🛍️ Каталоги (открытые): `/api/v1/{items,backgrounds,activity-types,item-categories}/catalog`
+- 💰 Покупки: `/api/v1/character-{items,backgrounds}/me/purchase`
+- 📊 Активности: `/api/v1/daily-activities/*`, `/api/v1/base-character-activities/*`
+- 📈 Прогресс: `/api/v1/daily-progress/*`
 - 😊 Настроение: `/api/v1/mood-history/*`
 - 👥 Друзья: `/api/v1/user-friends/*`
+- ⚙️ Настройки: `/api/v1/user-settings/me`
+- 💳 Транзакции: `/api/v1/transactions/*`
+- 📍 Позиции: `/api/v1/item-background-positions/*` (только админские)
 
 ## 🛠️ Стек технологий
 
@@ -26,7 +30,7 @@
 - **SQLAlchemy 2** с асинхронным движком и миграциями Alembic
 - **PostgreSQL** (через asyncpg), **Redis** и **RabbitMQ**
 - **Dependency Injector** для управления зависимостями
-- **JWT** для аутентификации пользователей
+- **Telegram Mini App Auth** для авторизации через Telegram
 - **Pydantic** для валидации данных
 - **Docker Compose** для локальной инфраструктуры
 - **Poetry** для управления зависимостями
@@ -41,12 +45,11 @@ src/
     database/            # Модели SQLAlchemy, сессии, миграции
     repositories/        # Реализации репозиториев (SQLAlchemy)
   core/                  # Ядро приложения
-    auth/                # JWT сервис, провайдеры токенов
+    auth/                # JWT сервис, провайдеры токенов, Telegram Mini App Auth
     settings.py          # Конфигурация на базе Pydantic
     security.py          # Хеширование паролей
   domain/                # Доменный слой
     entities/            # Доменные сущности (User, Character, Item, etc.)
-    value_objects/       # Value Objects (TelegramId, Coin, Experience)
     exceptions.py        # Доменные исключения
   drivers/rest/          # REST API транспортный слой
     schemas/             # Pydantic схемы для API
@@ -56,10 +59,19 @@ src/
   use_cases/             # Бизнес-логика (Use Cases)
     users/               # Use cases для пользователей
     characters/          # Use cases для персонажей
-    daily_activities/    # Use cases для активностей
+    items/               # Use cases для предметов
+    backgrounds/         # Use cases для фонов
+    character_items/     # Use cases для предметов персонажа
+    character_backgrounds/ # Use cases для фонов персонажа
+    item_background_positions/ # Use cases для позиций предметов
+    activity_types/      # Use cases для типов активностей
+    base_character_activities/ # Use cases для базовых активностей
+    daily_activities/    # Use cases для дневных активностей
+    daily_progress/      # Use cases для дневного прогресса
     mood_history/        # Use cases для настроения
     transactions/        # Use cases для транзакций
-    ...
+    user_friends/        # Use cases для друзей
+    user_settings/       # Use cases для настроек
   app.py                 # Точка входа FastAPI с lifespan-хуками
   container.py           # Dependency Injector контейнер
 ```
@@ -112,13 +124,10 @@ cp .env.example .env  # если примера нет, создайте .env в
 | `RABBITMQ_DEFAULT_USER` | `admin`     | Админ для initial seed                    |
 | `RABBITMQ_DEFAULT_PASS` | `admin`     | Пароль адм. пользователя                  |
 
-### JWT (Authentication)
+### Telegram Mini App
 | Переменная     | Значение по умолчанию | Назначение                               |
 |----------------|-----------------------|-------------------------------------------|
-| `JWT_SECRET_KEY` | *обязательно*       | Секретный ключ для подписи JWT токенов    |
-| `JWT_ALGORITHM` | `HS256`              | Алгоритм шифрования JWT                   |
-| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Время жизни access токена (минуты)   |
-| `JWT_REFRESH_TOKEN_EXPIRE_MINUTES` | `10080` | Время жизни refresh токена (7 дней) |
+| `TELEGRAM_BOT_TOKEN` | *обязательно*    | Токен Telegram бота для валидации Init Data |
 
 **Пример `.env` файла:**
 ```env
@@ -144,14 +153,11 @@ RABBIT_PASSWORD=healthity_rabbit_password
 RABBITMQ_DEFAULT_USER=admin
 RABBITMQ_DEFAULT_PASS=admin
 
-# JWT
-JWT_SECRET_KEY=your-super-secret-key-change-this-in-production
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-JWT_REFRESH_TOKEN_EXPIRE_MINUTES=10080
+# Telegram
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 ```
 
-> ⚠️ **Важно:** Измените `JWT_SECRET_KEY` на случайную строку в production окружении!
+> ⚠️ **Важно:** Измените `TELEGRAM_BOT_TOKEN` на реальное значение в production окружении!
 
 ### 2. Сборка и запуск контейнеров
 
@@ -208,10 +214,10 @@ poetry run alembic downgrade -1
 - **Асинхронность**: Все операции с БД выполняются асинхронно
 - **UUID Primary Keys**: Все сущности используют UUID как первичные ключи
 - **Temporal Fields**: Автоматические `created_at` и `updated_at` для аудита
-- **Value Objects**: `TelegramId`, `Coin`, `Experience` для type-safety
-- **JWT Authentication**: Secure token-based auth с refresh tokens
+- **Telegram Mini App Auth**: Авторизация через Telegram Init Data
 - **Transaction Logging**: Все финансовые операции логируются
 - **Ownership Checks**: Пользователи могут управлять только своими данными
+- **Cascade Deletion**: Каскадное удаление связанных сущностей (activity_types, items, backgrounds)
 
 ### Архитектурные паттерны
 
@@ -238,17 +244,17 @@ poetry run alembic downgrade -1
 
 ### Примеры запросов
 
-**Получить JWT токен:**
+**Регистрация пользователя:**
 ```bash
-curl -X POST http://localhost:8000/api/v1/auth/token \
+curl -X POST http://localhost:8000/api/v1/users/register \
   -H "Content-Type: application/json" \
-  -d '{"telegram_id": 123456789, "password": "your_password"}'
+  -d '{"telegram_id": 123456789, "password": "optional_password"}'
 ```
 
-**Получить информацию о пользователе:**
+**Получить информацию о пользователе (Telegram Mini App):**
 ```bash
 curl -X GET http://localhost:8000/api/v1/users/me \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  -H "Authorization: Bearer {telegram_init_data}"
 ```
 
 **Просмотреть каталог предметов (без авторизации):**
@@ -256,11 +262,18 @@ curl -X GET http://localhost:8000/api/v1/users/me \
 curl -X GET http://localhost:8000/api/v1/items/catalog
 ```
 
-Полная документация запросов доступна в [API_DOCUMENTATION.md](src/drivers/rest/API_DOCUMENTATION.md)
+**Админский запрос (Basic Auth):**
+```bash
+curl -X GET http://localhost:8000/api/v1/users/admin \
+  -H "Authorization: Basic {base64_encoded_credentials}"
+```
+
+Полная документация запросов доступна в [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
 
 ## 🔐 Безопасность
 
-- **JWT токены** для аутентификации пользователей
+- **Telegram Mini App Init Data** для авторизации через Telegram (для пользовательских эндпоинтов `/me`)
+- **Basic Authentication** для админских эндпоинтов
 - **Bcrypt** для хеширования паролей
 - **Ownership checks** на уровне use cases
 - **Admin-only routes** для административных операций
@@ -271,20 +284,28 @@ curl -X GET http://localhost:8000/api/v1/items/catalog
 ## 🚀 Основные функции
 
 ### Для пользователей
-- ✅ Регистрация и аутентификация через Telegram ID
+- ✅ Регистрация и аутентификация через Telegram ID (пароль опционален)
 - ✅ Создание и управление персонажем
 - ✅ Покупка предметов и фонов за внутриигровую валюту
-- ✅ Отслеживание дневных активностей
+- ✅ Управление предметами и фонами (активация, избранное)
+- ✅ Отслеживание дневных активностей и прогресса
 - ✅ Запись истории настроения
 - ✅ Просмотр статистики и прогресса
-- ✅ Управление друзьями
+- ✅ Управление друзьями (добавление, удаление, просмотр информации)
 - ✅ Настройки уведомлений (режим "не беспокоить")
+- ✅ Управление базовыми активностями персонажа
 
 ### Для администраторов
-- ✅ Управление пользователями
-- ✅ Управление каталогом (предметы, фоны, типы активностей)
+- ✅ Управление пользователями (CRUD)
+- ✅ Управление каталогом (предметы, фоны, типы активностей, категории)
+- ✅ Управление персонажами и их данными
+- ✅ Управление предметами и фонами персонажей
+- ✅ Управление позициями предметов на фонах
 - ✅ Ручное пополнение/списание баланса
 - ✅ Просмотр всех транзакций
+- ✅ Управление активностями и прогрессом
+- ✅ Управление историей настроения
+- ✅ Управление друзьями пользователей
 
 ## 📊 База данных
 
@@ -292,19 +313,31 @@ curl -X GET http://localhost:8000/api/v1/items/catalog
 - `users` - Пользователи системы
 - `characters` - Персонажи пользователей
 - `items` - Каталог предметов
+- `item_categories` - Категории предметов
 - `backgrounds` - Каталог фонов
 - `character_items` - Купленные предметы персонажей
 - `character_backgrounds` - Купленные фоны персонажей
-- `transactions` - История финансовых операций
+- `item_background_positions` - Позиции предметов на фонах
+- `activity_types` - Типы активностей
+- `base_character_activities` - Базовые активности персонажей
 - `daily_activities` - Дневные активности
 - `daily_progress` - Дневной прогресс персонажей
 - `mood_history` - История настроения
+- `transactions` - История финансовых операций
 - `user_friends` - Связи дружбы между пользователями
 - `user_settings` - Настройки пользователей
 
+### Каскадное удаление
+При удалении родительских сущностей автоматически удаляются связанные:
+- При удалении `activity_type` удаляются связанные `base_character_activities` и `character_activity_history`
+- При удалении `item` удаляются связанные `character_items` и `item_background_positions`
+- При удалении `background` удаляются связанные `character_backgrounds` и `item_background_positions`
+
+**Примечание:** Удаление `item_category` невозможно, если есть связанные `items` (RESTRICT).
+
 ## 📚 Дополнительные материалы
 
-- [API Documentation](src/drivers/rest/API_DOCUMENTATION.md) - Полная документация API
+- [API Documentation](API_DOCUMENTATION.md) - Полная документация API
 - [Swagger UI](http://localhost:8000/docs) - Интерактивная документация
 - [ReDoc](http://localhost:8000/redoc) - Альтернативная документация
 

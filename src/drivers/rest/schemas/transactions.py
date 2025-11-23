@@ -3,8 +3,6 @@ from typing import Any
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.domain.value_objects.telegram_id import TelegramId
-
 
 class TransactionBase(BaseModel):
     amount: int = Field(..., description="Transaction amount")
@@ -19,9 +17,14 @@ class TransactionCreate(TransactionBase):
 
 
 class TransactionUpdate(BaseModel):
+    transaction_id: UUID = Field(..., description="Transaction ID")
     amount: int | None = None
     type: str | None = None
     description: str | None = None
+
+
+class TransactionDelete(BaseModel):
+    transaction_id: UUID = Field(..., description="Transaction ID to delete")
 
 
 class TransactionResponse(TransactionBase):
@@ -37,7 +40,5 @@ class TransactionResponse(TransactionBase):
     @field_validator("user_tg_id", mode="before")
     @classmethod
     def validate_user_tg_id(cls, v: Any) -> int:
-        """Преобразует TelegramId value object в int перед валидацией"""
-        if isinstance(v, TelegramId):
-            return v.value
+        """Валидатор для user_tg_id"""
         return v

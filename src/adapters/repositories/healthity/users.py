@@ -1,4 +1,5 @@
 import logging
+import uuid
 from collections.abc import Callable
 
 from sqlalchemy import delete, select
@@ -10,7 +11,6 @@ from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.adapters.repositories.exceptions import RepositoryError
 from src.domain.entities.healthity.users import User, UserFriend, UserSettings
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.users import (
     UserFriendsRepository,
     UserSettingsRepository,
@@ -26,8 +26,8 @@ class SQLAlchemyUserSettingsRepository(
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
-    async def get_by_user(self, user_tg_id: TelegramId) -> UserSettings | None:
-        model = await self.first(filters={"user_tg_id": user_tg_id.value})
+    async def get_by_user(self, user_tg_id: int) -> UserSettings | None:
+        model = await self.first(filters={"user_tg_id": user_tg_id})
         if model is None:
             return None
         return self._to_domain(model)
@@ -38,7 +38,7 @@ class SQLAlchemyUserSettingsRepository(
             if model is None:
                 model = UserSettingsModel(
                     id=settings.id,
-                    user_tg_id=settings.user_tg_id.value,
+                    user_tg_id=settings.user_tg_id,
                     quiet_start_time=settings.quiet_start_time,
                     quiet_end_time=settings.quiet_end_time,
                     muted_days=settings.muted_days,
@@ -46,8 +46,8 @@ class SQLAlchemyUserSettingsRepository(
                 )
                 uow.session.add(model)
             else:
-                model.quiet_start_time = settings.quiet_start_time
-                model.quiet_end_time = settings.quiet_end_time
+                model.quiet_start_time = settings.quiet_start_time  # type: ignore[assignment]
+                model.quiet_end_time = settings.quiet_end_time  # type: ignore[assignment]
                 model.muted_days = list(settings.muted_days)
                 model.do_not_disturb = settings.do_not_disturb
 
@@ -61,7 +61,7 @@ class SQLAlchemyUserSettingsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def delete(self, settings_id) -> None:
+    async def delete(self, settings_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(UserSettingsModel).where(UserSettingsModel.id == settings_id)
@@ -71,9 +71,9 @@ class SQLAlchemyUserSettingsRepository(
     def _to_domain(model: UserSettingsModel) -> UserSettings:
         return UserSettings(
             id=model.id,
-            user_tg_id=TelegramId(model.user_tg_id),
-            quiet_start_time=model.quiet_start_time,
-            quiet_end_time=model.quiet_end_time,
+            user_tg_id=model.user_tg_id,
+            quiet_start_time=model.quiet_start_time,  # type: ignore[arg-type]
+            quiet_end_time=model.quiet_end_time,  # type: ignore[arg-type]
             muted_days=list(model.muted_days or []),
             do_not_disturb=model.do_not_disturb,
             created_at=model.created_at,
@@ -89,31 +89,31 @@ class SQLAlchemyUserFriendsRepository(
     def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
         super().__init__(uow_factory)
 
-    async def list_for_user(self, owner_tg_id: TelegramId) -> list[UserFriend]:
+    async def list_for_user(self, owner_tg_id: int) -> list[UserFriend]:
         async with self._uow() as uow:
             result = await uow.session.execute(
                 select(UserFriendModel).where(
-                    UserFriendModel.owner_tg_id == owner_tg_id.value
+                    UserFriendModel.owner_tg_id == owner_tg_id
                 )
             )
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, friend: UserFriend) -> UserFriend:
+    async def add(self, friend: UserFriend) -> UserFriend:  # type: ignore[override]
         model = UserFriendModel(
             id=friend.id,
-            owner_tg_id=friend.owner_tg_id.value,
-            friend_tg_id=friend.friend_tg_id.value,
+            owner_tg_id=friend.owner_tg_id,
+            friend_tg_id=friend.friend_tg_id,
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
 
-    async def remove(self, owner_tg_id: TelegramId, friend_tg_id: TelegramId) -> None:
+    async def remove(self, owner_tg_id: int, friend_tg_id: int) -> None:
         async with self._uow() as uow:
             result = await uow.session.execute(
                 delete(UserFriendModel).where(
-                    UserFriendModel.owner_tg_id == owner_tg_id.value,
-                    UserFriendModel.friend_tg_id == friend_tg_id.value,
+                    UserFriendModel.owner_tg_id == owner_tg_id,
+                    UserFriendModel.friend_tg_id == friend_tg_id,
                 )
             )
             if result.rowcount == 0:
@@ -132,7 +132,7 @@ class SQLAlchemyUserFriendsRepository(
             if model is None:
                 raise ValueError("UserFriend not found")
 
-            model.friend_tg_id = friend.friend_tg_id.value
+            model.friend_tg_id = friend.friend_tg_id
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -142,8 +142,8 @@ class SQLAlchemyUserFriendsRepository(
     def _to_domain(model: UserFriendModel) -> UserFriend:
         return UserFriend(
             id=model.id,
-            owner_tg_id=TelegramId(model.owner_tg_id),
-            friend_tg_id=TelegramId(model.friend_tg_id),
+            owner_tg_id=model.owner_tg_id,
+            friend_tg_id=model.friend_tg_id,
             created_at=model.created_at,
         )
 
@@ -155,13 +155,13 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
         super().__init__(uow_factory)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    async def create(self, user: User) -> User:
+    async def create(self, user: User) -> User:  # type: ignore[override]
         self.logger.debug(
             {
                 "action": "SQLAlchemyUsersRepository.create",
                 "stage": "start",
                 "data": {
-                    "telegram_id": user.telegram_id.value,
+                    "telegram_id": user.telegram_id,
                     "is_active": user.is_active,
                     "balance": user.balance,
                 },
@@ -169,7 +169,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
         )
 
         model = UserModel(
-            tg_id=user.telegram_id.value,
+            tg_id=user.telegram_id,
             password_hash=user.password_hash,
             is_active=user.is_active,
             is_admin=user.is_admin,
@@ -181,28 +181,28 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             {
                 "action": "SQLAlchemyUsersRepository.create",
                 "stage": "end",
-                "data": {"telegram_id": user.telegram_id.value},
+                "data": {"telegram_id": user.telegram_id},
             }
         )
         return self._to_domain(saved)
 
-    async def get_by_telegram_id(self, telegram_id: TelegramId) -> User | None:
+    async def get_by_telegram_id(self, telegram_id: int) -> User | None:
         self.logger.debug(
             {
                 "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
                 "stage": "start",
-                "data": {"telegram_id": telegram_id.value},
+                "data": {"telegram_id": telegram_id},
             }
         )
 
-        model = await self.first(filters={"tg_id": telegram_id.value})
+        model = await self.first(filters={"tg_id": telegram_id})
 
         if model is None:
             self.logger.debug(
                 {
                     "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
                     "stage": "not_found",
-                    "data": {"telegram_id": telegram_id.value},
+                    "data": {"telegram_id": telegram_id},
                 }
             )
             return None
@@ -211,7 +211,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             {
                 "action": "SQLAlchemyUsersRepository.get_by_telegram_id",
                 "stage": "end",
-                "data": {"telegram_id": telegram_id.value, "found": True},
+                "data": {"telegram_id": telegram_id, "found": True},
             }
         )
         return self._to_domain(model)
@@ -222,7 +222,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
                 "action": "SQLAlchemyUsersRepository.update",
                 "stage": "start",
                 "data": {
-                    "telegram_id": user.telegram_id.value,
+                    "telegram_id": user.telegram_id,
                     "is_active": user.is_active,
                     "balance": user.balance,
                 },
@@ -231,7 +231,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
 
         async with self._uow() as uow:
             result = await uow.session.execute(
-                select(UserModel).where(UserModel.tg_id == user.telegram_id.value)
+                select(UserModel).where(UserModel.tg_id == user.telegram_id)
             )
             model = result.scalar_one_or_none()
             if model is None:
@@ -239,7 +239,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
                     {
                         "action": "SQLAlchemyUsersRepository.update",
                         "stage": "not_found",
-                        "data": {"telegram_id": user.telegram_id.value},
+                        "data": {"telegram_id": user.telegram_id},
                     }
                 )
                 raise RepositoryError("User does not exist")
@@ -255,7 +255,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
                 {
                     "action": "SQLAlchemyUsersRepository.update",
                     "stage": "end",
-                    "data": {"telegram_id": user.telegram_id.value},
+                    "data": {"telegram_id": user.telegram_id},
                 }
             )
             return self._to_domain(model)
@@ -268,10 +268,10 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def delete(self, telegram_id: TelegramId) -> None:
+    async def delete(self, telegram_id: int) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             result = await uow.session.execute(
-                delete(UserModel).where(UserModel.tg_id == telegram_id.value)
+                delete(UserModel).where(UserModel.tg_id == telegram_id)
             )
             if result.rowcount == 0:
                 raise RepositoryError("User not found")
@@ -279,7 +279,7 @@ class SQLAlchemyUsersRepository(SQLAlchemyRepository[UserModel], UsersRepository
     @staticmethod
     def _to_domain(model: UserModel) -> User:
         return User(
-            telegram_id=TelegramId(model.tg_id),
+            telegram_id=model.tg_id,
             password_hash=model.password_hash,
             is_active=model.is_active,
             is_admin=model.is_admin,

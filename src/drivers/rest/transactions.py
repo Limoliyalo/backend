@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
     TransactionCreate,
+    TransactionDelete,
     TransactionResponse,
     TransactionUpdate,
 )
@@ -84,10 +84,9 @@ async def create_transaction(
     return TransactionResponse.model_validate(transaction)
 
 
-@router.patch("/{transaction_id}/admin", response_model=TransactionResponse)
+@router.patch("/admin", response_model=TransactionResponse)
 @inject
 async def update_transaction(
-    transaction_id: UUID,
     data: TransactionUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateTransactionUseCase = Depends(
@@ -97,7 +96,7 @@ async def update_transaction(
     """Обновить транзакцию (требуется админ-доступ)"""
     try:
         input_data = UpdateTransactionInput(
-            transaction_id=transaction_id,
+            transaction_id=data.transaction_id,
             amount=data.amount,
             type=data.type,
             description=data.description,
@@ -108,10 +107,10 @@ async def update_transaction(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{transaction_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_transaction(
-    transaction_id: UUID,
+    data: TransactionDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteTransactionUseCase = Depends(
         Provide[ApplicationContainer.delete_transaction_use_case]
@@ -119,7 +118,7 @@ async def delete_transaction(
 ):
     """Удалить транзакцию (требуется админ-доступ)"""
     try:
-        await use_case.execute(transaction_id)
+        await use_case.execute(data.transaction_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -137,7 +136,7 @@ async def list_my_transactions(
         None,
         description="Тип транзакции (deposit, withdrawal, purchase_item, purchase_background)",
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: ListTransactionsForUserUseCase = Depends(
         Provide[ApplicationContainer.list_transactions_for_user_use_case]
     ),
@@ -161,6 +160,6 @@ async def list_my_transactions(
             telegram_id, transaction_type
         )
     else:
-        transactions = await use_case.execute(telegram_id.value)
+        transactions = await use_case.execute(telegram_id)
 
     return [TransactionResponse.model_validate(t) for t in transactions]

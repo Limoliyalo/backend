@@ -17,6 +17,7 @@ from src.drivers.rest import (
     transactions,
     user_settings,
     activity_types,
+    base_character_activities,
     daily_activities,
     daily_progress,
     mood_history,
@@ -43,7 +44,7 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        app.container = container
+        app.state.container = container
         try:
             yield
         finally:
@@ -105,7 +106,7 @@ def create_app() -> FastAPI:
         app.openapi_schema = openapi_schema
         return app.openapi_schema
 
-    app.openapi = custom_openapi
+    app.openapi = custom_openapi  # type: ignore[method-assign]
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
@@ -138,6 +139,7 @@ def create_app() -> FastAPI:
     app.include_router(transactions.router, prefix="/api/v1")
     app.include_router(user_settings.router, prefix="/api/v1")
     app.include_router(activity_types.router, prefix="/api/v1")
+    app.include_router(base_character_activities.router, prefix="/api/v1")
     app.include_router(daily_activities.router, prefix="/api/v1")
     app.include_router(daily_progress.router, prefix="/api/v1")
     app.include_router(mood_history.router, prefix="/api/v1")

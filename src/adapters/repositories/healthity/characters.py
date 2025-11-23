@@ -19,7 +19,6 @@ from src.domain.entities.healthity.characters import (
     CharacterItem,
     ItemBackgroundPosition,
 )
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.characters import (
     CharacterBackgroundsRepository,
     CharacterItemsRepository,
@@ -42,8 +41,8 @@ class SQLAlchemyCharactersRepository(
             return None
         return self._to_domain(model)
 
-    async def get_by_user(self, user_tg_id: TelegramId) -> Character | None:
-        model = await self.first(filters={"user_tg_id": user_tg_id.value})
+    async def get_by_user(self, user_tg_id: int) -> Character | None:
+        model = await self.first(filters={"user_tg_id": user_tg_id})
         if model is None:
             return None
         return self._to_domain(model)
@@ -56,10 +55,10 @@ class SQLAlchemyCharactersRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, character: Character) -> Character:
+    async def add(self, character: Character) -> Character:  # type: ignore[override]
         model = CharacterModel(
             id=character.id,
-            user_tg_id=character.user_tg_id.value,
+            user_tg_id=character.user_tg_id,
             name=character.name,
             sex=character.sex,
             current_mood=character.current_mood,
@@ -87,7 +86,7 @@ class SQLAlchemyCharactersRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, character_id: uuid.UUID) -> None:
+    async def delete(self, character_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             model = await uow.session.get(CharacterModel, character_id)
             if model is None:
@@ -98,7 +97,7 @@ class SQLAlchemyCharactersRepository(
     def _to_domain(model: CharacterModel) -> Character:
         return Character(
             id=model.id,
-            user_tg_id=TelegramId(model.user_tg_id),
+            user_tg_id=model.user_tg_id,
             name=model.name,
             sex=model.sex,
             current_mood=model.current_mood,
@@ -142,14 +141,14 @@ class SQLAlchemyCharacterItemsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, character_item: CharacterItem) -> CharacterItem:
+    async def add(self, character_item: CharacterItem) -> CharacterItem:  # type: ignore[override]
         model = CharacterItemModel(
             id=character_item.id,
             character_id=character_item.character_id,
             item_id=character_item.item_id,
             is_active=character_item.is_active,
             is_favorite=character_item.is_favorite,
-            purchased_at=character_item.purchased_at,
+            is_purchased=character_item.is_purchased,
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
@@ -162,6 +161,7 @@ class SQLAlchemyCharacterItemsRepository(
 
             model.is_active = character_item.is_active
             model.is_favorite = character_item.is_favorite
+            model.is_purchased = character_item.is_purchased
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -182,7 +182,7 @@ class SQLAlchemyCharacterItemsRepository(
             item_id=model.item_id,
             is_active=model.is_active,
             is_favorite=model.is_favorite,
-            purchased_at=model.purchased_at,
+            is_purchased=model.is_purchased,
         )
 
 
@@ -217,7 +217,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(
+    async def add(  # type: ignore[override]
         self, character_background: CharacterBackground
     ) -> CharacterBackground:
         model = CharacterBackgroundModel(
@@ -226,7 +226,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
             background_id=character_background.background_id,
             is_active=character_background.is_active,
             is_favorite=character_background.is_favorite,
-            purchased_at=character_background.purchased_at,
+            is_purchased=character_background.is_purchased,
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
@@ -243,6 +243,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
 
             model.is_active = character_background.is_active
             model.is_favorite = character_background.is_favorite
+            model.is_purchased = character_background.is_purchased
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -257,7 +258,13 @@ class SQLAlchemyCharacterBackgroundsRepository(
         return self._to_domain(model)
 
     async def remove(self, character_background_id: uuid.UUID) -> None:
-        await super().remove(character_background_id)
+        async with self._uow() as uow:
+            model = await uow.session.get(
+                CharacterBackgroundModel, character_background_id
+            )
+            if model is None:
+                raise RepositoryError("Character background not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: CharacterBackgroundModel) -> CharacterBackground:
@@ -267,7 +274,7 @@ class SQLAlchemyCharacterBackgroundsRepository(
             background_id=model.background_id,
             is_active=model.is_active,
             is_favorite=model.is_favorite,
-            purchased_at=model.purchased_at,
+            is_purchased=model.is_purchased,
         )
 
 
@@ -291,7 +298,7 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             BackgroundModel, instance.background_id, "Background"
         )
 
-    async def get(
+    async def get(  # type: ignore[override]
         self, item_id: uuid.UUID, background_id: uuid.UUID
     ) -> ItemBackgroundPosition | None:
         async with self._uow() as uow:
@@ -306,7 +313,7 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             return None
         return self._to_domain(model)
 
-    async def add(self, position: ItemBackgroundPosition) -> ItemBackgroundPosition:
+    async def add(self, position: ItemBackgroundPosition) -> ItemBackgroundPosition:  # type: ignore[override]
         model = ItemBackgroundPositionModel(
             id=position.id,
             item_id=position.item_id,
@@ -331,6 +338,32 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             await uow.session.flush()
             await uow.session.refresh(model)
             return self._to_domain(model)
+
+    async def list_for_item_and_background(
+        self, item_id: uuid.UUID, background_id: uuid.UUID
+    ) -> list[ItemBackgroundPosition]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(ItemBackgroundPositionModel).where(
+                    ItemBackgroundPositionModel.item_id == item_id,
+                    ItemBackgroundPositionModel.background_id == background_id,
+                )
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_id(self, position_id: uuid.UUID) -> ItemBackgroundPosition | None:
+        model = await super().get(position_id)
+        if model is None:
+            return None
+        return self._to_domain(model)
+
+    async def remove(self, position_id: uuid.UUID) -> None:
+        async with self._uow() as uow:
+            model = await uow.session.get(ItemBackgroundPositionModel, position_id)
+            if model is None:
+                raise RepositoryError("Item background position not found")
+            await uow.session.delete(model)
 
     @staticmethod
     def _to_domain(model: ItemBackgroundPositionModel) -> ItemBackgroundPosition:

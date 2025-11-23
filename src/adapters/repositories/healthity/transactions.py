@@ -10,7 +10,6 @@ from src.adapters.database.models.user import UserModel
 from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.domain.entities.healthity.transactions import Transaction
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.transactions import TransactionsRepository
 
 
@@ -34,24 +33,24 @@ class SQLAlchemyTransactionsRepository(
                 BackgroundModel, instance.related_background_id, "Background"
             )
 
-    async def list_for_user(self, user_tg_id: TelegramId) -> list[Transaction]:
+    async def list_for_user(self, user_tg_id: int) -> list[Transaction]:
         async with self._uow() as uow:
             result = await uow.session.execute(
                 select(TransactionModel)
-                .where(TransactionModel.user_tg_id == user_tg_id.value)
+                .where(TransactionModel.user_tg_id == user_tg_id)
                 .order_by(TransactionModel.timestamp.desc())
             )
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
     async def list_for_user_by_date_range(
-        self, user_tg_id: TelegramId, start_date: datetime, end_date: datetime
+        self, user_tg_id: int, start_date: datetime, end_date: datetime
     ) -> list[Transaction]:
         async with self._uow() as uow:
             result = await uow.session.execute(
                 select(TransactionModel)
                 .where(
-                    TransactionModel.user_tg_id == user_tg_id.value,
+                    TransactionModel.user_tg_id == user_tg_id,
                     TransactionModel.timestamp >= start_date,
                     TransactionModel.timestamp <= end_date,
                 )
@@ -61,13 +60,13 @@ class SQLAlchemyTransactionsRepository(
         return [self._to_domain(model) for model in models]
 
     async def list_for_user_by_type(
-        self, user_tg_id: TelegramId, transaction_type: str
+        self, user_tg_id: int, transaction_type: str
     ) -> list[Transaction]:
         async with self._uow() as uow:
             result = await uow.session.execute(
                 select(TransactionModel)
                 .where(
-                    TransactionModel.user_tg_id == user_tg_id.value,
+                    TransactionModel.user_tg_id == user_tg_id,
                     TransactionModel.type == transaction_type,
                 )
                 .order_by(TransactionModel.timestamp.desc())
@@ -75,10 +74,10 @@ class SQLAlchemyTransactionsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
-    async def add(self, transaction: Transaction) -> Transaction:
+    async def add(self, transaction: Transaction) -> Transaction:  # type: ignore[override]
         model = TransactionModel(
             id=transaction.id,
-            user_tg_id=transaction.user_tg_id.value,
+            user_tg_id=transaction.user_tg_id,
             amount=transaction.amount,
             balance_after=transaction.balance_after,
             type=transaction.type,
@@ -90,7 +89,7 @@ class SQLAlchemyTransactionsRepository(
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
 
-    async def get(self, transaction_id: uuid.UUID) -> Transaction | None:
+    async def get(self, transaction_id: uuid.UUID) -> Transaction | None:  # type: ignore[override]
         model = await super().get(transaction_id)
         if model is None:
             return None
@@ -110,7 +109,7 @@ class SQLAlchemyTransactionsRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def delete(self, transaction_id: uuid.UUID) -> None:
+    async def delete(self, transaction_id: uuid.UUID) -> None:  # type: ignore[override]
         async with self._uow() as uow:
             await uow.session.execute(
                 delete(TransactionModel).where(TransactionModel.id == transaction_id)
@@ -120,7 +119,7 @@ class SQLAlchemyTransactionsRepository(
     def _to_domain(model: TransactionModel) -> Transaction:
         return Transaction(
             id=model.id,
-            user_tg_id=TelegramId(model.user_tg_id),
+            user_tg_id=model.user_tg_id,
             amount=model.amount,
             balance_after=model.balance_after,
             type=model.type,

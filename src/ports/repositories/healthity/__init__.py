@@ -1,6 +1,7 @@
 from src.ports.repositories.healthity.users import (
     UserFriendsRepository,
     UserSettingsRepository,
+    UsersRepository,
 )
 from src.ports.repositories.healthity.catalog import (
     ItemCategoriesRepository,
@@ -15,6 +16,7 @@ from src.ports.repositories.healthity.characters import (
 )
 from src.ports.repositories.healthity.activities import (
     ActivityTypesRepository,
+    BaseCharacterActivitiesRepository,
     DailyActivitiesRepository,
     DailyProgressRepository,
     MoodHistoryRepository,
@@ -24,6 +26,7 @@ from src.ports.repositories.healthity.transactions import TransactionsRepository
 __all__ = [
     "UserSettingsRepository",
     "UserFriendsRepository",
+    "UsersRepository",
     "ItemCategoriesRepository",
     "ItemsRepository",
     "BackgroundsRepository",
@@ -32,6 +35,7 @@ __all__ = [
     "CharacterBackgroundsRepository",
     "ItemBackgroundPositionsRepository",
     "ActivityTypesRepository",
+    "BaseCharacterActivitiesRepository",
     "DailyActivitiesRepository",
     "DailyProgressRepository",
     "MoodHistoryRepository",

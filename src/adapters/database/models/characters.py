@@ -1,17 +1,14 @@
 import uuid
-from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
     Numeric,
     String,
     UniqueConstraint,
-    func,
     text,
 )
 from sqlalchemy.dialects import postgresql
@@ -75,7 +72,7 @@ class CharacterItemModel(Base):
             postgresql_where=text("is_active = true"),
         ),
         Index(
-            "idx_character_items_favourite",
+            "idx_character_items_favorite",
             "character_id",
             postgresql_where=text("is_favorite = true"),
         ),
@@ -93,7 +90,7 @@ class CharacterItemModel(Base):
     )
     item_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("items.id", ondelete="RESTRICT"),
+        ForeignKey("items.id", ondelete="CASCADE"),
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(
@@ -106,10 +103,10 @@ class CharacterItemModel(Base):
         nullable=False,
         server_default=text("false"),
     )
-    purchased_at: Mapped[datetime] = mapped_column(
-        DateTime,
+    is_purchased: Mapped[bool] = mapped_column(
+        Boolean,
         nullable=False,
-        server_default=func.now(),
+        server_default=text("false"),
     )
 
 
@@ -139,7 +136,7 @@ class CharacterBackgroundModel(Base):
     )
     background_id: Mapped[uuid.UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("backgrounds.id", ondelete="RESTRICT"),
+        ForeignKey("backgrounds.id", ondelete="CASCADE"),
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(
@@ -152,10 +149,10 @@ class CharacterBackgroundModel(Base):
         nullable=False,
         server_default=text("false"),
     )
-    purchased_at: Mapped[datetime] = mapped_column(
-        DateTime,
+    is_purchased: Mapped[bool] = mapped_column(
+        Boolean,
         nullable=False,
-        server_default=func.now(),
+        server_default=text("false"),
     )
 
 

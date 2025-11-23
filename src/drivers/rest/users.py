@@ -7,7 +7,6 @@ from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.adapters.repositories.exceptions import RepositoryError, DuplicateEntityError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.users import (
@@ -15,6 +14,7 @@ from src.drivers.rest.schemas.users import (
     ChangePasswordRequest,
     DepositRequest,
     UserCreate,
+    UserDelete,
     UserRegister,
     UserResponse,
     UserStatisticsResponse,
@@ -156,7 +156,7 @@ async def get_user(
     )
 
     try:
-        user = await use_case.execute(telegram_id.value)
+        user = await use_case.execute(telegram_id)
         response = UserResponse.model_validate(user)
 
         logger.info(
@@ -238,12 +238,9 @@ async def create_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.put(
-    "/{telegram_id}/admin", response_model=UserResponse, status_code=status.HTTP_200_OK
-)
+@router.put("/admin", response_model=UserResponse, status_code=status.HTTP_200_OK)
 @inject
 async def update_user(
-    telegram_id: int,
     data: UserUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateUserUseCase = Depends(
@@ -253,7 +250,7 @@ async def update_user(
     """Обновить пользователя (требуется админ-доступ)"""
     try:
         input_data = UpdateUserInput(
-            telegram_id=telegram_id.value,
+            telegram_id=data.telegram_id,
             password=data.password,
             is_active=data.is_active,
             balance=data.balance,
@@ -266,10 +263,10 @@ async def update_user(
         raise BadRequestException(detail=str(e))
 
 
-@router.delete("/{telegram_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_user(
-    telegram_id: int,
+    data: UserDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteUserUseCase = Depends(
         Provide[ApplicationContainer.delete_user_use_case]
@@ -277,7 +274,7 @@ async def delete_user(
 ):
     """Удалить пользователя (требуется админ-доступ)"""
     try:
-        await use_case.execute(telegram_id.value)
+        await use_case.execute(data.telegram_id)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -285,12 +282,12 @@ async def delete_user(
 @router.get("/me", response_model=UserResponse, status_code=status.HTTP_200_OK)
 @inject
 async def get_current_user(
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: GetUserUseCase = Depends(Provide[ApplicationContainer.get_user_use_case]),
 ):
     """Получить информацию о текущем пользователе"""
     try:
-        user = await use_case.execute(telegram_id.value)
+        user = await use_case.execute(telegram_id)
         return UserResponse.model_validate(user)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
@@ -302,19 +299,19 @@ async def get_current_user(
 @inject
 async def deposit(
     data: DepositRequest,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: DepositUseCase = Depends(Provide[ApplicationContainer.deposit_use_case]),
 ):
     """Пополнить баланс текущего пользователя"""
     try:
         input_data = DepositInput(
-            telegram_id=telegram_id.value,
+            telegram_id=telegram_id,
             amount=data.amount,
             description=None,
         )
         user = await use_case.execute(input_data)
         return BalanceResponse(
-            telegram_id=user.telegram_id.value,
+            telegram_id=user.telegram_id,
             balance=user.balance,
             updated_at=user.updated_at,
         )
@@ -330,7 +327,7 @@ async def deposit(
 @inject
 async def withdraw(
     data: WithdrawRequest,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: WithdrawUseCase = Depends(
         Provide[ApplicationContainer.withdraw_use_case]
     ),
@@ -338,13 +335,13 @@ async def withdraw(
     """Списать средства с баланса текущего пользователя"""
     try:
         input_data = WithdrawInput(
-            telegram_id=telegram_id.value,
+            telegram_id=telegram_id,
             amount=data.amount,
             description=None,
         )
         user = await use_case.execute(input_data)
         return BalanceResponse(
-            telegram_id=user.telegram_id.value,
+            telegram_id=user.telegram_id,
             balance=user.balance,
             updated_at=user.updated_at,
         )
@@ -358,7 +355,7 @@ async def withdraw(
 @inject
 async def change_password(
     data: ChangePasswordRequest,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: ChangePasswordUseCase = Depends(
         Provide[ApplicationContainer.change_password_use_case]
     ),
@@ -366,7 +363,7 @@ async def change_password(
     """Изменить пароль текущего пользователя"""
     try:
         input_data = ChangePasswordInput(
-            telegram_id=telegram_id.value,
+            telegram_id=telegram_id,
             old_password=data.old_password,
             new_password=data.new_password,
         )
@@ -384,7 +381,7 @@ async def change_password(
 )
 @inject
 async def get_my_statistics(
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_user_use_case: GetUserUseCase = Depends(
         Provide[ApplicationContainer.get_user_use_case]
     ),
@@ -410,10 +407,10 @@ async def get_my_statistics(
     """Получить статистику текущего пользователя"""
     try:
 
-        user = await get_user_use_case.execute(telegram_id.value)
+        user = await get_user_use_case.execute(telegram_id)
 
         try:
-            character = await get_character_use_case.execute(telegram_id.value)
+            character = await get_character_use_case.execute(telegram_id)
             character_name = character.name
             character_sex = character.sex
             level = character.level
@@ -443,7 +440,7 @@ async def get_my_statistics(
         activities_count = len(mood_entries)
 
         return UserStatisticsResponse(
-            user_id=telegram_id.value,
+            user_id=telegram_id,
             balance=user.balance,
             level=level,
             total_experience=total_experience,

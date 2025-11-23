@@ -7,14 +7,15 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.activities import (
     DailyProgressCreate,
+    DailyProgressDelete,
     DailyProgressResponse,
     DailyProgressUpdate,
+    DailyProgressUserCreate,
 )
 from src.use_cases.characters.get_character import GetCharacterByUserUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
@@ -144,10 +145,9 @@ async def create_daily_progress(
     return DailyProgressResponse.model_validate(progress)
 
 
-@router.patch("/{progress_id}/admin", response_model=DailyProgressResponse)
+@router.patch("/admin", response_model=DailyProgressResponse)
 @inject
 async def update_daily_progress(
-    progress_id: UUID,
     data: DailyProgressUpdate,
     _: int = Depends(admin_user_provider),
     use_case: UpdateDailyProgressUseCase = Depends(
@@ -157,7 +157,7 @@ async def update_daily_progress(
     """Обновить дневной прогресс (требуется админ-доступ)"""
     try:
         input_data = UpdateDailyProgressInput(
-            progress_id=progress_id,
+            progress_id=data.progress_id,
             experience_gained=data.experience_gained,
             mood_average=data.mood_average,
             behavior_index=data.behavior_index,
@@ -168,10 +168,10 @@ async def update_daily_progress(
         raise NotFoundException(detail=str(e))
 
 
-@router.delete("/{progress_id}/admin", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
 @inject
 async def delete_daily_progress(
-    progress_id: UUID,
+    data: DailyProgressDelete,
     _: int = Depends(admin_user_provider),
     use_case: DeleteDailyProgressUseCase = Depends(
         Provide[ApplicationContainer.delete_daily_progress_use_case]
@@ -179,7 +179,7 @@ async def delete_daily_progress(
 ):
     """Удалить дневной прогресс (требуется админ-доступ)"""
     try:
-        await use_case.execute(progress_id)
+        await use_case.execute(data.progress_id)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -196,7 +196,7 @@ async def get_my_progress(
     end_date: datetime | None = Query(
         None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -229,7 +229,7 @@ async def get_my_progress(
         )
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         if day is not None:
             # Получаем прогресс за конкретный день
@@ -237,6 +237,8 @@ async def get_my_progress(
             return [DailyProgressResponse.model_validate(progress)] if progress else []
         else:
             # Получаем прогресс за диапазон дат
+            # Проверка гарантирует, что start_date и end_date не None
+            assert start_date is not None and end_date is not None
             progress_list = await list_range_use_case.execute(
                 character.id, start_date, end_date
             )
@@ -254,17 +256,8 @@ async def get_my_progress(
 )
 @inject
 async def create_or_update_daily_progress(
-    date: datetime = Query(
-        ..., description="Дата прогресса", example="2025-10-25 00:00:00"
-    ),
-    experience_gained: int = Query(0, ge=0, description="Полученный опыт"),
-    mood_average: str | None = Query(
-        None, description="Среднее настроение (neutral, happy, sad, angry, bored)"
-    ),
-    behavior_index: int | None = Query(
-        None, ge=0, le=100, description="Индекс поведения (0-100)"
-    ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    data: DailyProgressUserCreate,
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -275,14 +268,14 @@ async def create_or_update_daily_progress(
     """Создать или обновить дневной прогресс для текущего пользователя"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = CreateDailyProgressInput(
             character_id=character.id,
-            date=date,
-            experience_gained=experience_gained,
-            mood_average=mood_average,
-            behavior_index=behavior_index,
+            date=data.date,
+            experience_gained=data.experience_gained,
+            mood_average=data.mood_average,
+            behavior_index=data.behavior_index,
         )
         progress = await use_case.execute(input_data)
         return DailyProgressResponse.model_validate(progress)

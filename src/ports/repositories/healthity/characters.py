@@ -7,7 +7,6 @@ from src.domain.entities.healthity.characters import (
     CharacterItem,
     ItemBackgroundPosition,
 )
-from src.domain.value_objects.telegram_id import TelegramId
 
 
 class CharactersRepository(ABC):
@@ -16,7 +15,7 @@ class CharactersRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_by_user(self, user_tg_id: TelegramId) -> Character | None:
+    async def get_by_user(self, user_tg_id: int) -> Character | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -101,4 +100,18 @@ class ItemBackgroundPositionsRepository(ABC):
 
     @abstractmethod
     async def update(self, position: ItemBackgroundPosition) -> ItemBackgroundPosition:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_for_item_and_background(
+        self, item_id: uuid.UUID, background_id: uuid.UUID
+    ) -> list[ItemBackgroundPosition]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, position_id: uuid.UUID) -> ItemBackgroundPosition | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def remove(self, position_id: uuid.UUID) -> None:
         raise NotImplementedError
