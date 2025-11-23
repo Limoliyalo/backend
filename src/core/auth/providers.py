@@ -8,7 +8,6 @@ from src.core.auth.jwt_service import JwtService, TokenPayload, TokenType
 from src.core.auth.telegram_mini_app_auth import TelegramMiniAppAuth
 from src.core.auth.schemas.tma import TelegramAuthData
 from src.domain.exceptions import InvalidTokenException, TokenExpiredException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import UnauthorizedException
 from src.ports.repositories.auth import BlacklistedTokensRepository
 
@@ -87,11 +86,11 @@ class CurrentUserProvider:
             HTTPAuthorizationCredentials | None,
             Depends(http_bearer),
         ],
-    ) -> TelegramId:
+    ) -> int:
         payload = await self._payload_provider(credentials)
 
         try:
-            return TelegramId(int(payload.sub))
+            return int(payload.sub)
         except (TypeError, ValueError) as exc:
             raise _unauthorized("Invalid subject claim") from exc
 
@@ -156,7 +155,7 @@ class TelegramMiniAppCurrentUserProvider:
             TelegramAuthData,
             Depends(TelegramMiniAppAuthProvider),
         ],
-    ) -> TelegramId:
+    ) -> int:
         try:
             return self._tma_auth.get_telegram_id(auth_data)
         except InvalidTokenException as exc:

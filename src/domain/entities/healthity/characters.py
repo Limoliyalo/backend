@@ -2,13 +2,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from src.domain.value_objects.telegram_id import TelegramId
-
 
 @dataclass
 class Character:
     id: uuid.UUID
-    user_tg_id: TelegramId
+    user_tg_id: int
     name: str | None = None
     sex: str | None = None
     current_mood: str = "neutral"

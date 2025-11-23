@@ -1,9 +1,6 @@
 from datetime import datetime
-from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
-from src.domain.value_objects.telegram_id import TelegramId
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserBase(BaseModel):
@@ -39,14 +36,6 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-    @field_validator("telegram_id", mode="before")
-    @classmethod
-    def validate_telegram_id(cls, v: Any) -> int:
-        """Преобразует TelegramId value object в int перед валидацией"""
-        if isinstance(v, TelegramId):
-            return v.value
-        return v
 
 
 class DepositRequest(BaseModel):

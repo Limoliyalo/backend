@@ -8,7 +8,6 @@ from src.core.auth.schemas.tma import (
     TelegramUser,
 )
 from src.domain.exceptions import InvalidTokenException
-from src.domain.value_objects.telegram_id import TelegramId
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class TelegramMiniAppAuth:
                 "Failed to validate Telegram Mini App data"
             ) from exc
 
-    def get_telegram_id(self, auth_data: TelegramAuthData) -> TelegramId:
+    def get_telegram_id(self, auth_data: TelegramAuthData) -> int:
         """
         Extract Telegram ID from auth data.
 
@@ -89,7 +88,7 @@ class TelegramMiniAppAuth:
             auth_data: Validated Telegram auth data
 
         Returns:
-            TelegramId: User's Telegram ID
+            int: User's Telegram ID
 
         Raises:
             InvalidTokenException: If no user data found
@@ -97,4 +96,4 @@ class TelegramMiniAppAuth:
         if not auth_data.user:
             raise InvalidTokenException("No user data in Telegram Mini App init data")
 
-        return TelegramId(auth_data.user.id)
+        return auth_data.user.id

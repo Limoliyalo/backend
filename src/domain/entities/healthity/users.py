@@ -3,12 +3,10 @@ from datetime import datetime, time, timezone
 from typing import List
 import uuid
 
-from src.domain.value_objects.telegram_id import TelegramId
-
 
 @dataclass
 class User:
-    telegram_id: TelegramId
+    telegram_id: int
     password_hash: str | None = None
     is_active: bool = True
     is_admin: bool = False
@@ -57,7 +55,7 @@ class User:
 @dataclass
 class UserSettings:
     id: uuid.UUID
-    user_tg_id: TelegramId
+    user_tg_id: int
     quiet_start_time: time | None = None
     quiet_end_time: time | None = None
     muted_days: List[str] = field(default_factory=list)
@@ -89,8 +87,8 @@ class UserSettings:
 @dataclass
 class UserFriend:
     id: uuid.UUID
-    owner_tg_id: TelegramId
-    friend_tg_id: TelegramId
+    owner_tg_id: int
+    friend_tg_id: int
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

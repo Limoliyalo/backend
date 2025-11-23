@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
@@ -161,7 +160,7 @@ async def list_my_daily_activities(
     end_date: datetime | None = Query(
         None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -176,7 +175,7 @@ async def list_my_daily_activities(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         if start_date and end_date:
             activities = await activities_repo.list_for_date_range(
@@ -210,7 +209,7 @@ async def create_my_daily_activity(
         description="Цель активности (если не указана, будет использована цель из типа активности)",
     ),
     notes: str | None = Query(None, description="Заметки"),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -222,7 +221,7 @@ async def create_my_daily_activity(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = CreateDailyActivityInput(
             character_id=character.id,
@@ -245,7 +244,7 @@ async def create_my_daily_activity(
 async def update_my_daily_activity(
     activity_id: UUID,
     data: DailyActivityUpdate,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -260,7 +259,7 @@ async def update_my_daily_activity(
 
     try:
 
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         activity = await get_activity_use_case.execute(activity_id)
         if activity.character_id != character.id:

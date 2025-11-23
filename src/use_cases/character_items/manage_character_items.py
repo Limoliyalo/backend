@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from src.domain.entities.healthity.characters import CharacterItem
 from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.catalog import ItemsRepository
 from src.ports.repositories.healthity.characters import CharacterItemsRepository
 from src.ports.repositories.healthity.transactions import TransactionsRepository
@@ -180,9 +179,7 @@ class PurchaseItemWithBalanceUseCase:
             raise ValueError("Item already purchased")
 
         # Получаем пользователя и проверяем баланс
-        user = await self._users_repository.get_by_telegram_id(
-            TelegramId(data.user_tg_id)
-        )
+        user = await self._users_repository.get_by_telegram_id(data.user_tg_id)
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
@@ -207,7 +204,7 @@ class PurchaseItemWithBalanceUseCase:
 
         transaction = Transaction(
             id=uuid.uuid4(),
-            user_tg_id=TelegramId(data.user_tg_id),
+            user_tg_id=data.user_tg_id,
             amount=-item.cost,
             balance_after=updated_user.balance,
             type="purchase_item",

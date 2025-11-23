@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import NotFoundException
 from src.drivers.rest.schemas.transactions import (
@@ -137,7 +136,7 @@ async def list_my_transactions(
         None,
         description="Тип транзакции (deposit, withdrawal, purchase_item, purchase_background)",
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: ListTransactionsForUserUseCase = Depends(
         Provide[ApplicationContainer.list_transactions_for_user_use_case]
     ),
@@ -161,6 +160,6 @@ async def list_my_transactions(
             telegram_id, transaction_type
         )
     else:
-        transactions = await use_case.execute(telegram_id.value)
+        transactions = await use_case.execute(telegram_id)
 
     return [TransactionResponse.model_validate(t) for t in transactions]

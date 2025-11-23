@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.transactions import TransactionsRepository
 from src.ports.repositories.healthity.users import UsersRepository
 
@@ -28,10 +27,7 @@ class CreateTransactionUseCase:
         self._users_repository = users_repository
 
     async def execute(self, data: CreateTransactionInput) -> Transaction:
-
-        user = await self._users_repository.get_by_telegram_id(
-            TelegramId(data.user_tg_id)
-        )
+        user = await self._users_repository.get_by_telegram_id(data.user_tg_id)
         if user is None:
             raise EntityNotFoundException("User not found")
 
@@ -57,7 +53,7 @@ class CreateTransactionUseCase:
 
         transaction = Transaction(
             id=uuid.uuid4(),
-            user_tg_id=TelegramId(data.user_tg_id),
+            user_tg_id=data.user_tg_id,
             amount=data.amount,
             balance_after=new_balance,
             type=data.type,
@@ -84,7 +80,7 @@ class ListTransactionsForUserUseCase:
         self._transactions_repository = transactions_repository
 
     async def execute(self, user_tg_id: int) -> list[Transaction]:
-        return await self._transactions_repository.list_for_user(TelegramId(user_tg_id))
+        return await self._transactions_repository.list_for_user(user_tg_id)
 
 
 @dataclass

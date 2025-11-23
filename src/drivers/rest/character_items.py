@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
@@ -133,7 +132,7 @@ async def delete_character_item(
 @inject
 async def equip_my_item(
     character_item_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -147,7 +146,7 @@ async def equip_my_item(
     """Активировать предмет"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -163,7 +162,7 @@ async def equip_my_item(
 @inject
 async def unequip_my_item(
     character_item_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -177,7 +176,7 @@ async def unequip_my_item(
     """Деактивировать предмет"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -193,7 +192,7 @@ async def unequip_my_item(
 @inject
 async def toggle_favourite_item(
     character_item_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -207,7 +206,7 @@ async def toggle_favourite_item(
     """Добавить/убрать предмет из избранного"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         item = await get_item_use_case.execute(character_item_id)
 
         if item.character_id != character.id:
@@ -222,7 +221,7 @@ async def toggle_favourite_item(
 @router.get("/me", response_model=list[CharacterItemResponse])
 @inject
 async def list_my_items(
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -233,7 +232,7 @@ async def list_my_items(
     """Получить список купленных предметов текущего пользователя"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         items = await use_case.execute(character.id)
         return [CharacterItemResponse.model_validate(item) for item in items]
     except EntityNotFoundException as e:
@@ -248,7 +247,7 @@ async def list_my_items(
 @inject
 async def purchase_item(
     item_id: UUID = Query(..., description="ID предмета для покупки"),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -259,10 +258,10 @@ async def purchase_item(
     """Купить предмет (списываются монетки с баланса)"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = PurchaseItemWithBalanceInput(
-            user_tg_id=telegram_id.value,
+            user_tg_id=telegram_id,
             character_id=character.id,
             item_id=item_id,
         )

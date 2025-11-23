@@ -19,7 +19,6 @@ from src.domain.entities.healthity.characters import (
     CharacterItem,
     ItemBackgroundPosition,
 )
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.characters import (
     CharacterBackgroundsRepository,
     CharacterItemsRepository,
@@ -42,8 +41,8 @@ class SQLAlchemyCharactersRepository(
             return None
         return self._to_domain(model)
 
-    async def get_by_user(self, user_tg_id: TelegramId) -> Character | None:
-        model = await self.first(filters={"user_tg_id": user_tg_id.value})
+    async def get_by_user(self, user_tg_id: int) -> Character | None:
+        model = await self.first(filters={"user_tg_id": user_tg_id})
         if model is None:
             return None
         return self._to_domain(model)
@@ -59,7 +58,7 @@ class SQLAlchemyCharactersRepository(
     async def add(self, character: Character) -> Character:
         model = CharacterModel(
             id=character.id,
-            user_tg_id=character.user_tg_id.value,
+            user_tg_id=character.user_tg_id,
             name=character.name,
             sex=character.sex,
             current_mood=character.current_mood,
@@ -98,7 +97,7 @@ class SQLAlchemyCharactersRepository(
     def _to_domain(model: CharacterModel) -> Character:
         return Character(
             id=model.id,
-            user_tg_id=TelegramId(model.user_tg_id),
+            user_tg_id=model.user_tg_id,
             name=model.name,
             sex=model.sex,
             current_mood=model.current_mood,

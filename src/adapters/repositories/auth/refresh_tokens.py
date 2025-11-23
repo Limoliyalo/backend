@@ -7,7 +7,6 @@ from src.adapters.database.models.refresh_token import RefreshTokenModel
 from src.adapters.database.uow import AbstractUnitOfWork
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.domain.entities.auth import RefreshToken
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.auth import RefreshTokensRepository
 
 
@@ -22,7 +21,7 @@ class SQLAlchemyRefreshTokensRepository(
     async def create(self, token: RefreshToken) -> RefreshToken:
         model = RefreshTokenModel(
             id=token.id,
-            user_tg_id=token.user_tg_id.value,
+            user_tg_id=token.user_tg_id,
             token_hash=token.token_hash,
             jti=token.jti,
             expires_at=token.expires_at,
@@ -51,11 +50,11 @@ class SQLAlchemyRefreshTokensRepository(
             await uow.session.refresh(model)
             return self._to_domain(model)
 
-    async def revoke_for_user(self, user_tg_id: TelegramId) -> None:
+    async def revoke_for_user(self, user_tg_id: int) -> None:
         async with self._uow() as uow:
             await uow.session.execute(
                 update(RefreshTokenModel)
-                .where(RefreshTokenModel.user_tg_id == user_tg_id.value)
+                .where(RefreshTokenModel.user_tg_id == user_tg_id)
                 .values(revoked=True)
             )
 
@@ -63,7 +62,7 @@ class SQLAlchemyRefreshTokensRepository(
     def _to_domain(model: RefreshTokenModel) -> RefreshToken:
         return RefreshToken(
             id=model.id,
-            user_tg_id=TelegramId(model.user_tg_id),
+            user_tg_id=model.user_tg_id,
             token_hash=model.token_hash,
             jti=model.jti,
             expires_at=model.expires_at,

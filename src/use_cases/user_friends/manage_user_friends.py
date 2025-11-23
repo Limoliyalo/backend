@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from src.domain.entities.healthity.users import UserFriend
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.users import UserFriendsRepository
 
 
@@ -18,9 +17,7 @@ class ListUserFriendsUseCase:
         self._user_friends_repository = user_friends_repository
 
     async def execute(self, owner_tg_id: int) -> list[UserFriend]:
-        return await self._user_friends_repository.list_for_user(
-            TelegramId(owner_tg_id)
-        )
+        return await self._user_friends_repository.list_for_user(owner_tg_id)
 
 
 class GetUserFriendUseCase:
@@ -41,8 +38,8 @@ class AddFriendUseCase:
     async def execute(self, data: AddFriendInput) -> UserFriend:
         friend = UserFriend(
             id=uuid.uuid4(),
-            owner_tg_id=TelegramId(data.owner_tg_id),
-            friend_tg_id=TelegramId(data.friend_tg_id),
+            owner_tg_id=data.owner_tg_id,
+            friend_tg_id=data.friend_tg_id,
         )
         return await self._user_friends_repository.add(friend)
 
@@ -62,7 +59,7 @@ class UpdateUserFriendUseCase:
         if friend is None:
             raise EntityNotFoundException(f"UserFriend {data.friend_id} not found")
 
-        friend.friend_tg_id = TelegramId(data.friend_tg_id)
+        friend.friend_tg_id = data.friend_tg_id
         return await self._user_friends_repository.update(friend)
 
 
@@ -71,6 +68,4 @@ class RemoveFriendUseCase:
         self._user_friends_repository = user_friends_repository
 
     async def execute(self, owner_tg_id: int, friend_tg_id: int) -> None:
-        await self._user_friends_repository.remove(
-            TelegramId(owner_tg_id), TelegramId(friend_tg_id)
-        )
+        await self._user_friends_repository.remove(owner_tg_id, friend_tg_id)

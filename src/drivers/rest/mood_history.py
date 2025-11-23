@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.activities import (
@@ -148,7 +147,7 @@ async def get_my_mood_history(
     end_date: datetime | None = Query(
         None, description="Конечная дата диапазона", example="2025-10-31 23:59:59"
     ),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -181,7 +180,7 @@ async def get_my_mood_history(
         )
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         if day is not None:
             # Получаем историю настроения за конкретный день
@@ -204,7 +203,7 @@ async def get_my_mood_history(
 async def create_my_mood_entry(
     mood: str = Query(..., description="Настроение"),
     trigger: str | None = Query(None, description="Триггер"),
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
@@ -215,7 +214,7 @@ async def create_my_mood_entry(
     """Создать запись о настроении для текущего пользователя"""
 
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         input_data = CreateMoodHistoryInput(
             character_id=character.id,

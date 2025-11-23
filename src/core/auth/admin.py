@@ -9,7 +9,6 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from src.container import ApplicationContainer
 from src.core.security import PasswordHasher
-from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.exceptions import ForbiddenException, UnauthorizedException
 from src.ports.repositories.healthity.users import UsersRepository
 
@@ -44,7 +43,7 @@ async def admin_user_provider(
         )
 
     try:
-        user = await users_repository.get_by_telegram_id(TelegramId(telegram_id))
+        user = await users_repository.get_by_telegram_id(telegram_id)
     except Exception:
         logger.warning(
             {

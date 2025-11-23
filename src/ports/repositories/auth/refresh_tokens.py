@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from src.domain.entities.auth import RefreshToken
-from src.domain.value_objects.telegram_id import TelegramId
 
 
 class RefreshTokensRepository(ABC):
@@ -20,6 +19,6 @@ class RefreshTokensRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def revoke_for_user(self, user_tg_id: TelegramId) -> None:
+    async def revoke_for_user(self, user_tg_id: int) -> None:
         """Revoke all refresh tokens for user (e.g., on logout everywhere)."""
         raise NotImplementedError

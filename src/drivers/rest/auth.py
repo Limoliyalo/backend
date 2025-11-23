@@ -7,7 +7,6 @@ from src.core.auth.dependencies import (
     get_telegram_current_user,
 )
 from src.core.auth.schemas.tma import TelegramAuthData
-from src.domain.value_objects.telegram_id import TelegramId
 from src.drivers.rest.schemas.auth import (
     TelegramAuthDataResponse,
     TelegramUserResponse,
@@ -62,9 +61,9 @@ async def get_telegram_me(
     },
 )
 async def get_telegram_user_id(
-    user_id: TelegramId = Depends(get_telegram_current_user),
+    user_id: int = Depends(get_telegram_current_user),
 ):
-    return {"user_id": user_id.value}
+    return {"user_id": user_id}
 
 
 @router.get(
@@ -75,9 +74,9 @@ async def get_telegram_user_id(
     },
 )
 async def telegram_protected(
-    user_id: TelegramId = Depends(get_telegram_current_user),
+    user_id: int = Depends(get_telegram_current_user),
 ):
     return {
         "message": "Telegram Mini App authentication successful",
-        "user_id": user_id.value,
+        "user_id": user_id,
     }

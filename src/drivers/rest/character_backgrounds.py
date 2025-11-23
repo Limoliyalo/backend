@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
-from src.domain.value_objects.telegram_id import TelegramId
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
@@ -208,7 +207,7 @@ async def toggle_favorite_background(
 @router.get("/me", response_model=list[CharacterBackgroundResponse])
 @inject
 async def list_user_character_backgrounds(
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: ListCharacterBackgroundsUseCase = Depends(
         Provide[ApplicationContainer.list_character_backgrounds_use_case]
     ),
@@ -218,7 +217,7 @@ async def list_user_character_backgrounds(
 ):
     """Получить список фонов персонажа пользователя"""
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         backgrounds = await use_case.execute(character.id)
         return [
             CharacterBackgroundResponse.model_validate(background)
@@ -234,7 +233,7 @@ async def list_user_character_backgrounds(
 @inject
 async def get_user_character_background(
     background_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: GetCharacterBackgroundUseCase = Depends(
         Provide[ApplicationContainer.get_character_background_use_case]
     ),
@@ -245,7 +244,7 @@ async def get_user_character_background(
     """Получить фон персонажа пользователя по ID"""
     try:
         # Сначала получаем персонажа пользователя
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         # Затем получаем фон и проверяем, что он принадлежит этому персонажу
         background = await use_case.execute(background_id)
@@ -269,7 +268,7 @@ async def get_user_character_background(
 @inject
 async def purchase_background(
     background_data: CharacterBackgroundUserPurchase,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: PurchaseBackgroundWithBalanceUseCase = Depends(
         Provide[ApplicationContainer.purchase_background_with_balance_use_case]
     ),
@@ -279,9 +278,9 @@ async def purchase_background(
 ):
     """Купить фон для персонажа"""
     try:
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
         input_data = PurchaseBackgroundWithBalanceInput(
-            user_tg_id=telegram_id.value,
+            user_tg_id=telegram_id,
             character_id=character.id,
             background_id=background_data.background_id,
         )
@@ -300,7 +299,7 @@ async def purchase_background(
 async def update_user_character_background(
     background_id: UUID,
     background_data: CharacterBackgroundUpdate,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: UpdateCharacterBackgroundUseCase = Depends(
         Provide[ApplicationContainer.update_character_background_use_case]
     ),
@@ -314,7 +313,7 @@ async def update_user_character_background(
     """Обновить фон персонажа пользователя"""
     try:
         # Сначала получаем персонажа пользователя
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
@@ -338,7 +337,7 @@ async def update_user_character_background(
 @inject
 async def equip_user_background(
     background_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: EquipBackgroundUseCase = Depends(
         Provide[ApplicationContainer.equip_background_use_case]
     ),
@@ -352,7 +351,7 @@ async def equip_user_background(
     """Экипировать фон"""
     try:
         # Сначала получаем персонажа пользователя
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
@@ -371,7 +370,7 @@ async def equip_user_background(
 @inject
 async def unequip_user_background(
     background_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: UnequipBackgroundUseCase = Depends(
         Provide[ApplicationContainer.unequip_background_use_case]
     ),
@@ -385,7 +384,7 @@ async def unequip_user_background(
     """Снять фон"""
     try:
         # Сначала получаем персонажа пользователя
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)
@@ -406,7 +405,7 @@ async def unequip_user_background(
 @inject
 async def toggle_favorite_user_background(
     background_id: UUID,
-    telegram_id: TelegramId = Depends(get_telegram_current_user),
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: ToggleFavouriteBackgroundUseCase = Depends(
         Provide[ApplicationContainer.toggle_favourite_background_use_case]
     ),
@@ -420,7 +419,7 @@ async def toggle_favorite_user_background(
     """Переключить избранное для фона"""
     try:
         # Сначала получаем персонажа пользователя
-        character = await get_character_use_case.execute(telegram_id.value)
+        character = await get_character_use_case.execute(telegram_id)
 
         # Проверяем, что фон принадлежит персонажу пользователя
         background = await get_background_use_case.execute(background_id)

@@ -4,7 +4,6 @@ from datetime import time
 
 from src.domain.entities.healthity.users import UserSettings
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.users import UserSettingsRepository
 
 
@@ -65,7 +64,7 @@ class GetUserSettingsUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, user_tg_id: int) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(TelegramId(user_tg_id))
+        settings = await self._settings_repository.get_by_user(user_tg_id)
         if settings is None:
             raise EntityNotFoundException(f"Settings for user {user_tg_id} not found")
         return settings
@@ -76,15 +75,12 @@ class UpsertUserSettingsUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, data: UpdateUserSettingsInput) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(
-            TelegramId(data.user_tg_id)
-        )
+        settings = await self._settings_repository.get_by_user(data.user_tg_id)
 
         if settings is None:
-
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(data.user_tg_id),
+                user_tg_id=data.user_tg_id,
                 quiet_start_time=data.quiet_start_time,
                 quiet_end_time=data.quiet_end_time,
                 muted_days=data.muted_days or [],
@@ -109,15 +105,13 @@ class PatchUserSettingsUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, data: PatchUserSettingsInput) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(
-            TelegramId(data.user_tg_id)
-        )
+        settings = await self._settings_repository.get_by_user(data.user_tg_id)
 
         if settings is None:
             # Создаем новые настройки
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(data.user_tg_id),
+                user_tg_id=data.user_tg_id,
                 quiet_start_time=(
                     data.quiet_start_time if data._quiet_start_time_provided else None
                 ),
@@ -148,7 +142,7 @@ class DeleteUserSettingsUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, user_tg_id: int) -> None:
-        settings = await self._settings_repository.get_by_user(TelegramId(user_tg_id))
+        settings = await self._settings_repository.get_by_user(user_tg_id)
         if settings is None:
             raise EntityNotFoundException(f"Settings for user {user_tg_id} not found")
         await self._settings_repository.delete(settings.id)
@@ -159,13 +153,13 @@ class ResetQuietStartTimeUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, user_tg_id: int) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(TelegramId(user_tg_id))
+        settings = await self._settings_repository.get_by_user(user_tg_id)
 
         if settings is None:
             # Создаем новые настройки с null для quiet_start_time
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(user_tg_id),
+                user_tg_id=user_tg_id,
                 quiet_start_time=None,
                 quiet_end_time=None,
                 muted_days=[],
@@ -183,13 +177,13 @@ class ResetQuietEndTimeUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, user_tg_id: int) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(TelegramId(user_tg_id))
+        settings = await self._settings_repository.get_by_user(user_tg_id)
 
         if settings is None:
             # Создаем новые настройки с null для quiet_end_time
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(user_tg_id),
+                user_tg_id=user_tg_id,
                 quiet_start_time=None,
                 quiet_end_time=None,
                 muted_days=[],
@@ -207,15 +201,13 @@ class UpdateMutedDaysUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, data: UpdateMutedDaysInput) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(
-            TelegramId(data.user_tg_id)
-        )
+        settings = await self._settings_repository.get_by_user(data.user_tg_id)
 
         if settings is None:
             # Создаем новые настройки
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(data.user_tg_id),
+                user_tg_id=data.user_tg_id,
                 quiet_start_time=None,
                 quiet_end_time=None,
                 muted_days=data.muted_days,
@@ -233,15 +225,13 @@ class UpdateDoNotDisturbUseCase:
         self._settings_repository = settings_repository
 
     async def execute(self, data: UpdateDoNotDisturbInput) -> UserSettings:
-        settings = await self._settings_repository.get_by_user(
-            TelegramId(data.user_tg_id)
-        )
+        settings = await self._settings_repository.get_by_user(data.user_tg_id)
 
         if settings is None:
             # Создаем новые настройки
             settings = UserSettings(
                 id=uuid.uuid4(),
-                user_tg_id=TelegramId(data.user_tg_id),
+                user_tg_id=data.user_tg_id,
                 quiet_start_time=None,
                 quiet_end_time=None,
                 muted_days=[],

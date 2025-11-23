@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from src.domain.entities.healthity.characters import CharacterBackground
 from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.healthity.catalog import BackgroundsRepository
 from src.ports.repositories.healthity.characters import CharacterBackgroundsRepository
 from src.ports.repositories.healthity.transactions import TransactionsRepository
@@ -244,7 +243,7 @@ class PurchaseBackgroundWithBalanceUseCase:
         if any(cb.background_id == data.background_id for cb in existing_backgrounds):
             raise ValueError("Background already purchased")
 
-        telegram_id = TelegramId(data.user_tg_id)
+        telegram_id = data.user_tg_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
         if user is None:
             raise EntityNotFoundException(f"User {data.user_tg_id} not found")

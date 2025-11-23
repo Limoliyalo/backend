@@ -18,7 +18,6 @@ from src.domain.exceptions import (
     TokenExpiredException,
     UserNotFoundException,
 )
-from src.domain.value_objects.telegram_id import TelegramId
 from src.ports.repositories.auth import (
     BlacklistedTokensRepository,
     RefreshTokensRepository,
@@ -120,7 +119,7 @@ class _RefreshTokenManager:
                 "action": "RefreshTokenManager.persist_new",
                 "stage": "stored",
                 "data": {
-                    "user_tg_id": user.telegram_id.value,
+                    "user_tg_id": user.telegram_id,
                     "refresh_jti": str(jti),
                 },
             }
@@ -141,12 +140,12 @@ class _RefreshTokenManager:
         )
         return updated
 
-    async def revoke_all(self, telegram_id: TelegramId) -> None:
+    async def revoke_all(self, telegram_id: int) -> None:
         await self._repository.revoke_for_user(telegram_id)
         logger.debug(
             {
                 "action": "RefreshTokenManager.revoke_all",
-                "data": {"user_tg_id": telegram_id.value},
+                "data": {"user_tg_id": telegram_id},
             }
         )
 
@@ -180,7 +179,7 @@ class _RefreshTokenManager:
         except (TypeError, ValueError) as exc:
             raise InvalidTokenException("Invalid subject claim") from exc
 
-        if token.user_tg_id.value != user_id:
+        if token.user_tg_id != user_id:
             raise InvalidTokenException("Token subject mismatch")
 
         return token, user_id
@@ -205,7 +204,7 @@ class LoginUseCase:
         )
 
     async def execute(self, data: LoginInput) -> AuthTokens:
-        telegram_id = TelegramId(data.user_tg_id)
+        telegram_id = data.user_tg_id
         user = await self._users_repository.get_by_telegram_id(telegram_id)
 
         if user is None or not user.password_hash:
@@ -221,7 +220,7 @@ class LoginUseCase:
 
         claims = {"is_admin": user.is_admin}
         tokens = self._token_factory.create_tokens(
-            subject=user.telegram_id.value,
+            subject=user.telegram_id,
             claims=claims,
         )
 
@@ -264,7 +263,7 @@ class RefreshUseCase:
             refresh_token=data.refresh_token
         )
 
-        user = await self._users_repository.get_by_telegram_id(TelegramId(user_id))
+        user = await self._users_repository.get_by_telegram_id(user_id)
         if user is None:
             raise UserNotFoundException(user_id)
         if not user.is_active:
@@ -274,7 +273,7 @@ class RefreshUseCase:
 
         claims = {"is_admin": user.is_admin}
         tokens = self._token_factory.create_tokens(
-            subject=user.telegram_id.value,
+            subject=user.telegram_id,
             claims=claims,
         )
 
@@ -310,7 +309,7 @@ class LogoutUseCase:
         )
 
         if data.revoke_all:
-            await self._token_manager.revoke_all(TelegramId(user_id))
+            await self._token_manager.revoke_all(user_id)
         else:
             await self._token_manager.revoke(token)
 
