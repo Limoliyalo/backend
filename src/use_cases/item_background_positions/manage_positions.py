@@ -50,6 +50,21 @@ class GetPositionUseCase:
         return position
 
 
+class GetPositionByItemAndBackgroundUseCase:
+    def __init__(self, positions_repository: ItemBackgroundPositionsRepository) -> None:
+        self._positions_repository = positions_repository
+
+    async def execute(
+        self, item_id: uuid.UUID, background_id: uuid.UUID
+    ) -> ItemBackgroundPosition:
+        position = await self._positions_repository.get(item_id, background_id)
+        if position is None:
+            raise EntityNotFoundException(
+                f"ItemBackgroundPosition for item {item_id} and background {background_id} not found"
+            )
+        return position
+
+
 class CreatePositionUseCase:
     def __init__(self, positions_repository: ItemBackgroundPositionsRepository) -> None:
         self._positions_repository = positions_repository

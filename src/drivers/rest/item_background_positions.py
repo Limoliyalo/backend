@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_background_positions import (
+    GetPositionByItemAndBackgroundRequest,
     ItemBackgroundPositionCreate,
     ItemBackgroundPositionDelete,
     ItemBackgroundPositionResponse,
@@ -18,6 +20,7 @@ from src.use_cases.item_background_positions.manage_positions import (
     CreatePositionInput,
     CreatePositionUseCase,
     DeletePositionUseCase,
+    GetPositionByItemAndBackgroundUseCase,
     GetPositionUseCase,
     ListPositionsForItemUseCase,
     UpdatePositionInput,
@@ -27,6 +30,27 @@ from src.use_cases.item_background_positions.manage_positions import (
 router = APIRouter(
     prefix="/item-background-positions", tags=["Item Background Positions"]
 )
+
+
+@router.post(
+    "/me",
+    response_model=ItemBackgroundPositionResponse,
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def get_position_by_item_and_background(
+    data: GetPositionByItemAndBackgroundRequest,
+    _: int = Depends(get_telegram_current_user),
+    use_case: GetPositionByItemAndBackgroundUseCase = Depends(
+        Provide[ApplicationContainer.get_position_by_item_and_background_use_case]
+    ),
+):
+    """Получить позицию предмета на фоне по item_id и background_id"""
+    try:
+        position = await use_case.execute(data.item_id, data.background_id)
+        return ItemBackgroundPositionResponse.model_validate(position)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
 
 
 @router.get(

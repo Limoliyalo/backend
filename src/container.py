@@ -165,6 +165,7 @@ from src.use_cases.item_categories.manage_item_categories import (
 from src.use_cases.item_background_positions.manage_positions import (
     ListPositionsForItemUseCase,
     GetPositionUseCase,
+    GetPositionByItemAndBackgroundUseCase,
     CreatePositionUseCase,
     UpdatePositionUseCase,
     DeletePositionUseCase,
@@ -662,6 +663,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     get_position_use_case = providers.Factory(
         GetPositionUseCase, positions_repository=item_background_positions_repository
+    )
+    get_position_by_item_and_background_use_case = providers.Factory(
+        GetPositionByItemAndBackgroundUseCase,
+        positions_repository=item_background_positions_repository,
     )
     create_position_use_case = providers.Factory(
         CreatePositionUseCase, positions_repository=item_background_positions_repository
