@@ -10,7 +10,6 @@ from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
 from src.drivers.rest.schemas.item_background_positions import (
-    GetPositionByItemAndBackgroundRequest,
     ItemBackgroundPositionCreate,
     ItemBackgroundPositionDelete,
     ItemBackgroundPositionResponse,
@@ -32,14 +31,15 @@ router = APIRouter(
 )
 
 
-@router.post(
+@router.get(
     "/me",
     response_model=ItemBackgroundPositionResponse,
     status_code=status.HTTP_200_OK,
 )
 @inject
 async def get_position_by_item_and_background(
-    data: GetPositionByItemAndBackgroundRequest,
+    item_id: UUID = Query(..., description="ID предмета"),
+    background_id: UUID = Query(..., description="ID фона"),
     _: int = Depends(get_telegram_current_user),
     use_case: GetPositionByItemAndBackgroundUseCase = Depends(
         Provide[ApplicationContainer.get_position_by_item_and_background_use_case]
@@ -47,7 +47,7 @@ async def get_position_by_item_and_background(
 ):
     """Получить позицию предмета на фоне по item_id и background_id"""
     try:
-        position = await use_case.execute(data.item_id, data.background_id)
+        position = await use_case.execute(item_id, background_id)
         return ItemBackgroundPositionResponse.model_validate(position)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))

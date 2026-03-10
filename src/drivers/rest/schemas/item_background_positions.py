@@ -26,11 +26,6 @@ class ItemBackgroundPositionDelete(BaseModel):
     position_id: UUID = Field(..., description="Position ID to delete")
 
 
-class GetPositionByItemAndBackgroundRequest(BaseModel):
-    item_id: UUID = Field(..., description="Item ID")
-    background_id: UUID = Field(..., description="Background ID")
-
-
 class ItemBackgroundPositionResponse(ItemBackgroundPositionBase):
     id: UUID
 
