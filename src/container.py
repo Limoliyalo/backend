@@ -166,6 +166,7 @@ from src.use_cases.item_background_positions.manage_positions import (
     ListPositionsForItemUseCase,
     GetPositionUseCase,
     GetPositionByItemAndBackgroundUseCase,
+    ListItemsWithPositionsForBackgroundUseCase,
     CreatePositionUseCase,
     UpdatePositionUseCase,
     DeletePositionUseCase,
@@ -667,6 +668,11 @@ class ApplicationContainer(containers.DeclarativeContainer):
     get_position_by_item_and_background_use_case = providers.Factory(
         GetPositionByItemAndBackgroundUseCase,
         positions_repository=item_background_positions_repository,
+    )
+    list_items_with_positions_for_background_use_case = providers.Factory(
+        ListItemsWithPositionsForBackgroundUseCase,
+        positions_repository=item_background_positions_repository,
+        items_repository=items_repository,
     )
     create_position_use_case = providers.Factory(
         CreatePositionUseCase, positions_repository=item_background_positions_repository

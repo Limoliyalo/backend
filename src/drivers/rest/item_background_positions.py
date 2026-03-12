@@ -14,6 +14,7 @@ from src.drivers.rest.schemas.item_background_positions import (
     ItemBackgroundPositionDelete,
     ItemBackgroundPositionResponse,
     ItemBackgroundPositionUpdate,
+    ItemWithPositionResponse,
 )
 from src.use_cases.item_background_positions.manage_positions import (
     CreatePositionInput,
@@ -21,6 +22,7 @@ from src.use_cases.item_background_positions.manage_positions import (
     DeletePositionUseCase,
     GetPositionByItemAndBackgroundUseCase,
     GetPositionUseCase,
+    ListItemsWithPositionsForBackgroundUseCase,
     ListPositionsForItemUseCase,
     UpdatePositionInput,
     UpdatePositionUseCase,
@@ -29,6 +31,30 @@ from src.use_cases.item_background_positions.manage_positions import (
 router = APIRouter(
     prefix="/item-background-positions", tags=["Item Background Positions"]
 )
+
+
+@router.get(
+    "/me/items",
+    response_model=list[ItemWithPositionResponse],
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def list_items_with_positions_for_background(
+    background_id: UUID = Query(..., description="ID фона"),
+    _: int = Depends(get_telegram_current_user),
+    use_case: ListItemsWithPositionsForBackgroundUseCase = Depends(
+        Provide[ApplicationContainer.list_items_with_positions_for_background_use_case]
+    ),
+):
+    """Получить все предметы с позициями для указанного фона"""
+    pairs = await use_case.execute(background_id)
+    return [
+        ItemWithPositionResponse(
+            item=item,
+            position=ItemBackgroundPositionResponse.model_validate(position),
+        )
+        for item, position in pairs
+    ]
 
 
 @router.get(

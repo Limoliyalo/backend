@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.drivers.rest.schemas.catalog import ItemResponse
+
 
 class ItemBackgroundPositionBase(BaseModel):
     item_id: UUID = Field(..., description="Item ID")
@@ -30,3 +32,8 @@ class ItemBackgroundPositionResponse(ItemBackgroundPositionBase):
     id: UUID
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ItemWithPositionResponse(BaseModel):
+    item: ItemResponse
+    position: ItemBackgroundPositionResponse

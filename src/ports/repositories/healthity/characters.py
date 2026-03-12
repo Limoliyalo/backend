@@ -113,5 +113,11 @@ class ItemBackgroundPositionsRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def list_for_background(
+        self, background_id: uuid.UUID
+    ) -> list[ItemBackgroundPosition]:
+        raise NotImplementedError
+
+    @abstractmethod
     async def remove(self, position_id: uuid.UUID) -> None:
         raise NotImplementedError
