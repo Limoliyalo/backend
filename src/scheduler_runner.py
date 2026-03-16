@@ -11,8 +11,6 @@ due ScheduledTask entries to NATS so workers can pick them up.
 import asyncio
 import logging
 
-from taskiq.scheduler import TaskiqScheduler
-
 from src.infrastructure.messaging.broker import broker, scheduler
 
 # Task modules must be imported so the scheduler knows the task names.
