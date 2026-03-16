@@ -26,6 +26,7 @@ from src.drivers.rest import (
     character_backgrounds,
     item_categories,
     item_background_positions,
+    notifications,
 )
 
 logging.basicConfig(
@@ -147,6 +148,7 @@ def create_app() -> FastAPI:
     app.include_router(character_items.router, prefix="/api/v1")
     app.include_router(character_backgrounds.router, prefix="/api/v1")
     app.include_router(item_background_positions.router, prefix="/api/v1")
+    app.include_router(notifications.router, prefix="/api/v1")
 
     return app
 
