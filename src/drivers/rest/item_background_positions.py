@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
+from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError
 from src.drivers.rest.exceptions import NotFoundException, BadRequestException
@@ -13,12 +14,15 @@ from src.drivers.rest.schemas.item_background_positions import (
     ItemBackgroundPositionDelete,
     ItemBackgroundPositionResponse,
     ItemBackgroundPositionUpdate,
+    ItemWithPositionResponse,
 )
 from src.use_cases.item_background_positions.manage_positions import (
     CreatePositionInput,
     CreatePositionUseCase,
     DeletePositionUseCase,
+    GetPositionByItemAndBackgroundUseCase,
     GetPositionUseCase,
+    ListItemsWithPositionsForBackgroundUseCase,
     ListPositionsForItemUseCase,
     UpdatePositionInput,
     UpdatePositionUseCase,
@@ -27,6 +31,52 @@ from src.use_cases.item_background_positions.manage_positions import (
 router = APIRouter(
     prefix="/item-background-positions", tags=["Item Background Positions"]
 )
+
+
+@router.get(
+    "/me/items",
+    response_model=list[ItemWithPositionResponse],
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def list_items_with_positions_for_background(
+    background_id: UUID = Query(..., description="ID фона"),
+    _: int = Depends(get_telegram_current_user),
+    use_case: ListItemsWithPositionsForBackgroundUseCase = Depends(
+        Provide[ApplicationContainer.list_items_with_positions_for_background_use_case]
+    ),
+):
+    """Получить все предметы с позициями для указанного фона"""
+    pairs = await use_case.execute(background_id)
+    return [
+        ItemWithPositionResponse(
+            item=item,
+            position=ItemBackgroundPositionResponse.model_validate(position),
+        )
+        for item, position in pairs
+    ]
+
+
+@router.get(
+    "/me",
+    response_model=ItemBackgroundPositionResponse,
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def get_position_by_item_and_background(
+    item_id: UUID = Query(..., description="ID предмета"),
+    background_id: UUID = Query(..., description="ID фона"),
+    _: int = Depends(get_telegram_current_user),
+    use_case: GetPositionByItemAndBackgroundUseCase = Depends(
+        Provide[ApplicationContainer.get_position_by_item_and_background_use_case]
+    ),
+):
+    """Получить позицию предмета на фоне по item_id и background_id"""
+    try:
+        position = await use_case.execute(item_id, background_id)
+        return ItemBackgroundPositionResponse.model_validate(position)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
 
 
 @router.get(

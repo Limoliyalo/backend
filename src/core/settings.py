@@ -26,6 +26,11 @@ class RedisSettings(BaseModel):
     port: int
     password: str | None = None
 
+    @property
+    def url(self) -> str:
+        auth = f":{self.password}@" if self.password else ""
+        return f"redis://{auth}{self.host}:{self.port}/0"
+
 
 class RabbitSettings(BaseModel):
     host: str
@@ -76,6 +81,8 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_minutes: int
 
     telegram_bot_token: str
+
+    nats_url: str = "nats://localhost:4222"
 
     application_admin_telegram_ids: str = ""
 

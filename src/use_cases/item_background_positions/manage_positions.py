@@ -1,8 +1,10 @@
 import uuid
 from dataclasses import dataclass
 
+from src.domain.entities.healthity.catalog import Item
 from src.domain.entities.healthity.characters import ItemBackgroundPosition
 from src.domain.exceptions import EntityNotFoundException
+from src.ports.repositories.healthity.catalog import ItemsRepository
 from src.ports.repositories.healthity.characters import (
     ItemBackgroundPositionsRepository,
 )
@@ -50,6 +52,21 @@ class GetPositionUseCase:
         return position
 
 
+class GetPositionByItemAndBackgroundUseCase:
+    def __init__(self, positions_repository: ItemBackgroundPositionsRepository) -> None:
+        self._positions_repository = positions_repository
+
+    async def execute(
+        self, item_id: uuid.UUID, background_id: uuid.UUID
+    ) -> ItemBackgroundPosition:
+        position = await self._positions_repository.get(item_id, background_id)
+        if position is None:
+            raise EntityNotFoundException(
+                f"ItemBackgroundPosition for item {item_id} and background {background_id} not found"
+            )
+        return position
+
+
 class CreatePositionUseCase:
     def __init__(self, positions_repository: ItemBackgroundPositionsRepository) -> None:
         self._positions_repository = positions_repository
@@ -82,6 +99,27 @@ class UpdatePositionUseCase:
         position.position_z = data.position_z
 
         return await self._positions_repository.update(position)
+
+
+class ListItemsWithPositionsForBackgroundUseCase:
+    def __init__(
+        self,
+        positions_repository: ItemBackgroundPositionsRepository,
+        items_repository: ItemsRepository,
+    ) -> None:
+        self._positions_repository = positions_repository
+        self._items_repository = items_repository
+
+    async def execute(
+        self, background_id: uuid.UUID
+    ) -> list[tuple[Item, ItemBackgroundPosition]]:
+        positions = await self._positions_repository.list_for_background(background_id)
+        result: list[tuple[Item, ItemBackgroundPosition]] = []
+        for position in positions:
+            item = await self._items_repository.get(position.item_id)
+            if item is not None:
+                result.append((item, position))
+        return result
 
 
 class DeletePositionUseCase:

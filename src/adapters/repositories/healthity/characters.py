@@ -352,6 +352,18 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
+    async def list_for_background(
+        self, background_id: uuid.UUID
+    ) -> list[ItemBackgroundPosition]:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(ItemBackgroundPositionModel).where(
+                    ItemBackgroundPositionModel.background_id == background_id
+                )
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
     async def get_by_id(self, position_id: uuid.UUID) -> ItemBackgroundPosition | None:
         model = await super().get(position_id)
         if model is None:
