@@ -1,38 +1,38 @@
 """
 Taskiq scheduler entry point.
 
-Run with:
+Must use the same logic as `taskiq scheduler` CLI: `TaskiqScheduler.startup()`
+does NOT run the polling loop — only `run_scheduler()` from taskiq does
+(`run_scheduler_loop` + RedisScheduleSource.startup).
+
+Run:
     python -m src.scheduler_runner
 
-The scheduler polls RedisScheduleSource at each cron tick and dispatches
-due ScheduledTask entries to NATS so workers can pick them up.
+Or equivalently:
+    taskiq scheduler src.infrastructure.messaging.broker:scheduler -fsd \\
+      --tasks-pattern "src/infrastructure/tasks/*.py"
 """
 
 import asyncio
-import logging
+import sys
 
-from src.infrastructure.messaging.broker import broker, scheduler
-
-# Task modules must be imported so the scheduler knows the task names.
-import src.infrastructure.tasks.notifications  # noqa: F401
-
-logger = logging.getLogger(__name__)
+from taskiq.cli.scheduler.args import SchedulerArgs
+from taskiq.cli.scheduler.run import run_scheduler
 
 
-async def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-    logger.info("Starting Taskiq scheduler …")
-
-    await broker.startup()
+def main() -> None:
+    argv = [
+        "src.infrastructure.messaging.broker:scheduler",
+        "-fsd",
+        "--tasks-pattern",
+        "src/infrastructure/tasks/*.py",
+    ]
+    args = SchedulerArgs.from_cli(argv)
     try:
-        await scheduler.startup()
-    finally:
-        await broker.shutdown()
-        logger.info("Scheduler shut down.")
+        asyncio.run(run_scheduler(args))
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
