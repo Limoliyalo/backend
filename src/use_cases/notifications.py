@@ -14,8 +14,8 @@ from src.infrastructure.messaging.broker import schedule_source
 
 logger = logging.getLogger(__name__)
 
-# Task name must match the fully-qualified import path used by the worker.
-_NOTIFICATION_TASK_NAME = "src.infrastructure.tasks.notifications.send_notification_task"
+# Task name must match Taskiq registration: "{module}:{function}" (colon, not dot).
+_NOTIFICATION_TASK_NAME = "src.infrastructure.tasks.notifications:send_notification_task"
 
 
 def _build_cron(interval_minutes: int) -> str:
