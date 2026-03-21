@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Query, status
 
-from src.core.auth.dependencies import get_telegram_current_user
+from src.core.auth.notifications_access import verify_notifications_access_token
 from src.drivers.rest.exceptions import BadRequestException
 from src.drivers.rest.schemas.notifications import (
     NotificationStatusResponse,
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
 )
 async def start_notifications(
     data: StartNotificationRequest,
-    _current_user: int = Depends(get_telegram_current_user),
+    _authorized: bool = Depends(verify_notifications_access_token),
 ) -> StartNotificationResponse:
     """
     Save subscription to Redis and register a cron-based Taskiq schedule.
@@ -63,7 +63,7 @@ async def start_notifications(
 )
 async def stop_notifications(
     data: StopNotificationRequest,
-    _current_user: int = Depends(get_telegram_current_user),
+    _authorized: bool = Depends(verify_notifications_access_token),
 ) -> StopNotificationResponse:
     """
     Remove the Taskiq schedule from Redis and mark the subscription inactive.
@@ -83,7 +83,7 @@ async def stop_notifications(
 )
 async def get_notification_status(
     user_id: int = Query(..., description="System user ID"),
-    _current_user: int = Depends(get_telegram_current_user),
+    _authorized: bool = Depends(verify_notifications_access_token),
 ) -> NotificationStatusResponse:
     """Return current subscription state: active flag, interval, and last delivery time."""
     result = await GetNotificationStatusUseCase().execute(user_id)

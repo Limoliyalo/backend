@@ -84,6 +84,8 @@ class Settings(BaseSettings):
 
     nats_url: str = "nats://localhost:4222"
 
+    notifications_access_token: str = ""
+
     application_admin_telegram_ids: str = ""
 
     model_config = SettingsConfigDict(
