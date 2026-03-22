@@ -78,12 +78,16 @@ class StartNotificationsUseCase:
         schedule_id = str(uuid.uuid4())
         cron = _build_cron(data.interval_minutes)
 
+        # RedisScheduleSource stores under prefix:{schedule.schedule_id}.
+        # task_id alone does NOT set schedule_id; without this, a random
+        # schedule_id is generated and delete_schedule() never removes the key.
         scheduled_task = ScheduledTask(
             task_name=_NOTIFICATION_TASK_NAME,
             labels={},
             args=[data.user_id],
             kwargs={},
             cron=cron,
+            schedule_id=schedule_id,
             task_id=schedule_id,
         )
         await schedule_source.add_schedule(scheduled_task)
