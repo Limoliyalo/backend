@@ -50,6 +50,16 @@ async def deactivate_user_notifications(user_id: int) -> None:
     logger.info("Notifications deactivated for user %s", user_id)
 
 
+async def update_schedule_id(user_id: int, schedule_id: str) -> None:
+    """Update only schedule_id after the worker chains the next one-shot schedule."""
+    redis = get_redis_client()
+    data = await get_user_notification_settings(user_id)
+    if data is None:
+        return
+    data["schedule_id"] = schedule_id
+    await redis.set(_key(user_id), json.dumps(data), ex=NOTIFICATION_KEY_TTL)
+
+
 async def update_last_sent_at(user_id: int) -> None:
     """Record the timestamp of the most recent successful notification delivery."""
     redis = get_redis_client()

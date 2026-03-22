@@ -1,30 +1,17 @@
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
-
-from taskiq import ScheduledTask
+from datetime import datetime, timedelta, timezone
 
 from src.adapters.redis.notification_store import (
     deactivate_user_notifications,
     get_user_notification_settings,
     set_user_notification_settings,
 )
+from src.infrastructure.messaging.notification_scheduling import schedule_notification_at
 from src.infrastructure.messaging.broker import schedule_source
 
 logger = logging.getLogger(__name__)
-
-# Task name must match Taskiq registration: "{module}:{function}" (colon, not dot).
-_NOTIFICATION_TASK_NAME = "src.infrastructure.tasks.notifications:send_notification_task"
-
-
-def _build_cron(interval_minutes: int) -> str:
-    """
-    Convert a minute interval into a cron expression.
-    For example, 5 → '*/5 * * * *' (every 5 minutes).
-    Works reliably for any value 1-59.
-    """
-    return f"*/{interval_minutes} * * * *"
 
 
 # ---------------------------------------------------------------------------
@@ -50,8 +37,9 @@ class StartNotificationsUseCase:
     """
     Activates (or updates) periodic notifications for a user.
 
-    Idempotent: calling again with a different interval replaces the old
-    schedule — the previous ScheduledTask is deleted from Redis first.
+    Uses one-shot ``time=`` schedules (not cron) so the first message is sent
+    ``interval_minutes`` after this request; each subsequent run is scheduled
+    from the worker after delivery (anchored to subscription time, not clock).
     """
 
     async def execute(self, data: StartNotificationsInput) -> StartNotificationsResult:
@@ -76,21 +64,9 @@ class StartNotificationsUseCase:
                 )
 
         schedule_id = str(uuid.uuid4())
-        cron = _build_cron(data.interval_minutes)
+        first_at = datetime.now(timezone.utc) + timedelta(minutes=data.interval_minutes)
 
-        # RedisScheduleSource stores under prefix:{schedule.schedule_id}.
-        # task_id alone does NOT set schedule_id; without this, a random
-        # schedule_id is generated and delete_schedule() never removes the key.
-        scheduled_task = ScheduledTask(
-            task_name=_NOTIFICATION_TASK_NAME,
-            labels={},
-            args=[data.user_id],
-            kwargs={},
-            cron=cron,
-            schedule_id=schedule_id,
-            task_id=schedule_id,
-        )
-        await schedule_source.add_schedule(scheduled_task)
+        await schedule_notification_at(first_at, data.user_id, schedule_id)
 
         await set_user_notification_settings(
             user_id=data.user_id,
@@ -99,11 +75,11 @@ class StartNotificationsUseCase:
         )
 
         logger.info(
-            "Notifications started for user %s: every %s min (schedule=%s, cron=%s)",
+            "Notifications started for user %s: every %s min (schedule=%s, first_at=%s)",
             data.user_id,
             data.interval_minutes,
             schedule_id,
-            cron,
+            first_at.isoformat(),
         )
         return StartNotificationsResult(
             user_id=data.user_id,
