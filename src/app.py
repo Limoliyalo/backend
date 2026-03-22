@@ -79,12 +79,6 @@ def create_app() -> FastAPI:
                 "scheme": "basic",
                 "description": "Admin Basic Authentication. Username: telegram_id, Password: user password",
             },
-            "NotificationsAccessToken": {
-                "type": "apiKey",
-                "in": "header",
-                "name": "access-token",
-                "description": "Shared secret for /notifications/* (env NOTIFICATIONS_ACCESS_TOKEN).",
-            },
         }
 
         # Add security requirements to specific paths
@@ -101,8 +95,6 @@ def create_app() -> FastAPI:
                     if is_public:
                         # Public endpoints - no security required
                         continue
-                    elif "/notifications/" in path:
-                        operation["security"] = [{"NotificationsAccessToken": []}]
                     elif "/admin" in path or "admin" in operation.get(
                         "operationId", ""
                     ):

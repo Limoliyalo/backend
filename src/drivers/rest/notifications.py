@@ -1,14 +1,13 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
-from src.core.auth.notifications_access import verify_notifications_access_token
+from src.core.auth.dependencies import get_telegram_current_user
 from src.drivers.rest.exceptions import BadRequestException
 from src.drivers.rest.schemas.notifications import (
     NotificationStatusResponse,
     StartNotificationRequest,
     StartNotificationResponse,
-    StopNotificationRequest,
     StopNotificationResponse,
 )
 from src.use_cases.notifications import (
@@ -31,16 +30,17 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
 )
 async def start_notifications(
     data: StartNotificationRequest,
-    _authorized: bool = Depends(verify_notifications_access_token),
+    telegram_id: int = Depends(get_telegram_current_user),
 ) -> StartNotificationResponse:
     """
-    Save subscription to Redis and register a cron-based Taskiq schedule.
+    Save subscription to Redis and register a one-shot Taskiq schedule (then chained).
+    Telegram user id comes from validated Mini App init data (Authorization), like /me.
     Calling again with a different interval replaces the existing schedule.
     """
     try:
         result = await StartNotificationsUseCase().execute(
             StartNotificationsInput(
-                user_id=data.user_id,
+                user_id=telegram_id,
                 interval_minutes=data.notification_time,
             )
         )
@@ -62,15 +62,14 @@ async def start_notifications(
     summary="Deactivate periodic Telegram notifications",
 )
 async def stop_notifications(
-    data: StopNotificationRequest,
-    _authorized: bool = Depends(verify_notifications_access_token),
+    telegram_id: int = Depends(get_telegram_current_user),
 ) -> StopNotificationResponse:
     """
     Remove the Taskiq schedule from Redis and mark the subscription inactive.
     Any in-flight task will check the is_active flag and exit without sending.
     """
     result = await StopNotificationsUseCase().execute(
-        StopNotificationsInput(user_id=data.user_id)
+        StopNotificationsInput(user_id=telegram_id)
     )
     return StopNotificationResponse(user_id=result.user_id, is_active=result.is_active)
 
@@ -82,11 +81,10 @@ async def stop_notifications(
     summary="Get notification subscription status",
 )
 async def get_notification_status(
-    user_id: int = Query(..., description="System user ID"),
-    _authorized: bool = Depends(verify_notifications_access_token),
+    telegram_id: int = Depends(get_telegram_current_user),
 ) -> NotificationStatusResponse:
     """Return current subscription state: active flag, interval, and last delivery time."""
-    result = await GetNotificationStatusUseCase().execute(user_id)
+    result = await GetNotificationStatusUseCase().execute(telegram_id)
     return NotificationStatusResponse(
         user_id=result.user_id,
         is_active=result.is_active,

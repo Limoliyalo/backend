@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class StartNotificationRequest(BaseModel):
-    user_id: int = Field(..., description="System user ID (equals Telegram chat ID)")
     notification_time: int = Field(
         ..., gt=0, description="Notification interval in minutes (must be > 0)"
     )
@@ -15,10 +14,6 @@ class StartNotificationRequest(BaseModel):
         if v <= 0:
             raise ValueError("notification_time must be a positive integer")
         return v
-
-
-class StopNotificationRequest(BaseModel):
-    user_id: int = Field(..., description="System user ID")
 
 
 class StartNotificationResponse(BaseModel):
