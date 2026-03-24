@@ -2,16 +2,23 @@ import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from src.adapters.database.session import session_manager
+from src.adapters.database.uow import SQLAlchemyUnitOfWork
 from src.adapters.redis.notification_store import (
     get_user_notification_settings,
     update_last_sent_at,
     update_schedule_id,
 )
+from src.adapters.repositories.healthity.users import SQLAlchemyUserSettingsRepository
 from src.infrastructure.messaging.notification_scheduling import schedule_notification_at
 from src.infrastructure.messaging.broker import broker
 from src.infrastructure.telegram.client import send_telegram_message
 
 logger = logging.getLogger(__name__)
+
+
+def _uow_factory() -> SQLAlchemyUnitOfWork:
+    return SQLAlchemyUnitOfWork(session_factory=session_manager.async_session)
 
 
 @broker.task
@@ -31,14 +38,21 @@ async def send_notification_task(user_id: int) -> None:
         return
 
     interval = data["interval_minutes"]
-    text = f"⏰ Напоминание по расписанию каждые {interval} мин."
 
-    try:
-        await send_telegram_message(tg_id=user_id, text=text)
-        await update_last_sent_at(user_id)
-    except Exception:
-        logger.exception("Failed to send notification to user %s", user_id)
-        raise
+    repo = SQLAlchemyUserSettingsRepository(uow_factory=_uow_factory)
+    user_settings = await repo.get_by_user(user_id)
+    today = datetime.now(timezone.utc).strftime("%A").lower()
+
+    if user_settings and today in user_settings.muted_days:
+        logger.info("Muted day %s for user %s — skipping send", today, user_id)
+    else:
+        text = f"⏰ Напоминание по расписанию каждые {interval} мин."
+        try:
+            await send_telegram_message(tg_id=user_id, text=text)
+            await update_last_sent_at(user_id)
+        except Exception:
+            logger.exception("Failed to send notification to user %s", user_id)
+            raise
 
     # Re-read: user may have hit /stop during send.
     data = await get_user_notification_settings(user_id)
