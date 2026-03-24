@@ -43,7 +43,9 @@ async def send_notification_task(user_id: int) -> None:
     user_settings = await repo.get_by_user(user_id)
     today = datetime.now(timezone.utc).strftime("%A").lower()
 
-    if user_settings and today in user_settings.muted_days:
+    if user_settings and user_settings.do_not_disturb:
+        logger.info("Do not disturb enabled for user %s — skipping send", user_id)
+    elif user_settings and today in user_settings.muted_days:
         logger.info("Muted day %s for user %s — skipping send", today, user_id)
     else:
         text = f"⏰ Напоминание по расписанию каждые {interval} мин."
