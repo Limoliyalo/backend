@@ -30,6 +30,11 @@ class Character:
         self._recalculate_level()
         self.touch()
 
+    def set_experience(self, amount: int) -> None:
+        self.total_experience = max(0, amount)
+        self._recalculate_level()
+        self.touch()
+
     def _recalculate_level(self) -> None:
         expected_level = max(1, self.total_experience // 100)
         if expected_level != self.level:

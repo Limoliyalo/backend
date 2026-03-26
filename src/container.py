@@ -109,6 +109,7 @@ from src.use_cases.daily_activities.manage_daily_activities import (
     ListDailyActivitiesForDayUseCase,
     UpdateDailyActivityUseCase,
 )
+from src.use_cases.daily_activities.recalculate_xp import RecalculateDailyXpUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
     CreateDailyProgressUseCase,
     DeleteDailyProgressUseCase,
@@ -472,6 +473,12 @@ class ApplicationContainer(containers.DeclarativeContainer):
     delete_daily_activity_use_case = providers.Factory(
         DeleteDailyActivityUseCase,
         daily_activities_repository=daily_activities_repository,
+    )
+    recalculate_daily_xp_use_case = providers.Factory(
+        RecalculateDailyXpUseCase,
+        daily_activities_repository=daily_activities_repository,
+        daily_progress_repository=daily_progress_repository,
+        characters_repository=characters_repository,
     )
 
     list_base_character_activities_use_case = providers.Factory(

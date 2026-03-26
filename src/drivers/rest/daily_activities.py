@@ -28,6 +28,10 @@ from src.use_cases.daily_activities.manage_daily_activities import (
     UpdateDailyActivityInput,
     UpdateDailyActivityUseCase,
 )
+from src.use_cases.daily_activities.recalculate_xp import (
+    RecalculateDailyXpInput,
+    RecalculateDailyXpUseCase,
+)
 
 router = APIRouter(prefix="/daily-activities", tags=["Daily Activities"])
 
@@ -207,6 +211,9 @@ async def create_my_daily_activity(
     use_case: CreateDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.create_daily_activity_use_case]
     ),
+    recalculate_xp_use_case: RecalculateDailyXpUseCase = Depends(
+        Provide[ApplicationContainer.recalculate_daily_xp_use_case]
+    ),
 ):
     """Создать активность для текущего пользователя"""
 
@@ -223,6 +230,9 @@ async def create_my_daily_activity(
             notes=data.notes,
         )
         activity = await use_case.execute(input_data)
+        await recalculate_xp_use_case.execute(
+            RecalculateDailyXpInput(character_id=character.id, date=activity.date)
+        )
         return DailyActivityResponse.model_validate(activity)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
@@ -244,6 +254,9 @@ async def update_my_daily_activity(
     update_use_case: UpdateDailyActivityUseCase = Depends(
         Provide[ApplicationContainer.update_daily_activity_use_case]
     ),
+    recalculate_xp_use_case: RecalculateDailyXpUseCase = Depends(
+        Provide[ApplicationContainer.recalculate_daily_xp_use_case]
+    ),
 ):
     """Обновить активность текущего пользователя"""
 
@@ -262,6 +275,9 @@ async def update_my_daily_activity(
             notes=data.notes,
         )
         updated_activity = await update_use_case.execute(input_data)
+        await recalculate_xp_use_case.execute(
+            RecalculateDailyXpInput(character_id=character.id, date=updated_activity.date)
+        )
         return DailyActivityResponse.model_validate(updated_activity)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
