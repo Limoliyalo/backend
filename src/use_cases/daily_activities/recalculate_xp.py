@@ -13,7 +13,7 @@ from src.ports.repositories.healthity.activities import (
 )
 from src.ports.repositories.healthity.characters import CharactersRepository
 
-XP_PER_ACTIVITY = 10
+XP_PER_ACTIVITY = 30
 
 
 def _compute_daily_xp(activities: list[CharacterActivityHistory]) -> int:
