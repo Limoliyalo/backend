@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from src.adapters.database.session import session_manager
 from src.adapters.database.uow import SQLAlchemyUnitOfWork
@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 def _uow_factory() -> SQLAlchemyUnitOfWork:
     return SQLAlchemyUnitOfWork(session_factory=session_manager.async_session)
+
+
+def _is_quiet_time(now: time, start: time, end: time) -> bool:
+    if start <= end:
+        return start <= now < end
+    # overnight range, e.g. 23:00 – 02:00
+    return now >= start or now < end
 
 
 @broker.task
@@ -47,6 +54,17 @@ async def send_notification_task(user_id: int) -> None:
         logger.info("Do not disturb enabled for user %s — skipping send", user_id)
     elif user_settings and today in user_settings.muted_days:
         logger.info("Muted day %s for user %s — skipping send", today, user_id)
+    elif (
+        user_settings
+        and user_settings.quiet_start_time is not None
+        and user_settings.quiet_end_time is not None
+        and _is_quiet_time(
+            datetime.now(timezone.utc).time(),
+            user_settings.quiet_start_time,
+            user_settings.quiet_end_time,
+        )
+    ):
+        logger.info("Quiet hours for user %s — skipping send", user_id)
     else:
         text = f"⏰ Напоминание по расписанию каждые {interval} мин."
         try:
