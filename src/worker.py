@@ -14,3 +14,4 @@ from src.infrastructure.messaging.broker import broker  # noqa: F401
 # Explicitly import the task module so the @broker.task decorator runs
 # and registers send_notification_task with this broker instance.
 import src.infrastructure.tasks.notifications  # noqa: F401
+import src.infrastructure.tasks.daily_rewards  # noqa: F401

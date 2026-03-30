@@ -110,6 +110,7 @@ from src.use_cases.daily_activities.manage_daily_activities import (
     UpdateDailyActivityUseCase,
 )
 from src.use_cases.daily_activities.recalculate_xp import RecalculateDailyXpUseCase
+from src.use_cases.rewards.daily_reward import RunDailyRewardsUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
     CreateDailyProgressUseCase,
     DeleteDailyProgressUseCase,
@@ -479,6 +480,13 @@ class ApplicationContainer(containers.DeclarativeContainer):
         daily_activities_repository=daily_activities_repository,
         daily_progress_repository=daily_progress_repository,
         characters_repository=characters_repository,
+    )
+    run_daily_rewards_use_case = providers.Factory(
+        RunDailyRewardsUseCase,
+        characters_repository=characters_repository,
+        base_activities_repository=base_character_activities_repository,
+        daily_activities_repository=daily_activities_repository,
+        create_transaction_use_case=create_transaction_use_case,
     )
 
     list_base_character_activities_use_case = providers.Factory(

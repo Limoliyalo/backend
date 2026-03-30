@@ -1,3 +1,4 @@
+import datetime
 import uuid
 from dataclasses import dataclass
 
@@ -15,6 +16,7 @@ class CreateTransactionInput:
     related_item_id: uuid.UUID | None = None
     related_background_id: uuid.UUID | None = None
     description: str | None = None
+    reward_date: "datetime.date | None" = None
 
 
 class CreateTransactionUseCase:
@@ -31,7 +33,7 @@ class CreateTransactionUseCase:
         if user is None:
             raise EntityNotFoundException("User not found")
 
-        if data.type == "deposit":
+        if data.type in ["deposit", "daily_reward"]:
             new_balance = user.balance + data.amount
         elif data.type in [
             "purchase",
@@ -42,7 +44,7 @@ class CreateTransactionUseCase:
             new_balance = user.balance - data.amount
         else:
             raise ValueError(
-                "Invalid transaction type only deposit, purchase, withdraw, purchase_item, purchase_background are allowed"
+                "Invalid transaction type. Allowed: deposit, daily_reward, purchase, withdraw, purchase_item, purchase_background"
             )
 
         if new_balance < 0:
@@ -60,6 +62,7 @@ class CreateTransactionUseCase:
             related_item_id=data.related_item_id,
             related_background_id=data.related_background_id,
             description=data.description,
+            reward_date=data.reward_date,
         )
         return await self._transactions_repository.add(transaction)
 

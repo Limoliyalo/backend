@@ -1,5 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
+import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +10,7 @@ from fastapi.openapi.utils import get_openapi
 
 from src.adapters.database.session import session_manager
 from src.container import ApplicationContainer
+from src.infrastructure.messaging.daily_reward_scheduling import schedule_daily_reward_at
 from src.drivers.rest import (
     auth,
     users,
@@ -47,6 +50,16 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.container = container
         try:
+            # Seed daily reward schedule chain (idempotent on DB level).
+            now = datetime.now(timezone.utc)
+            tomorrow = now.date() + timedelta(days=1)
+            next_midnight = datetime(
+                tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=timezone.utc
+            )
+            await schedule_daily_reward_at(
+                next_midnight,
+                f"daily_reward_seed:{next_midnight.date().isoformat()}:{uuid.uuid4()}",
+            )
             yield
         finally:
             container.unwire()

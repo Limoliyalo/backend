@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -47,6 +48,7 @@ class TransactionModel(Base):
         nullable=True,
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reward_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

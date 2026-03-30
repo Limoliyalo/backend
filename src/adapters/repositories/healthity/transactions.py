@@ -84,6 +84,7 @@ class SQLAlchemyTransactionsRepository(
             related_item_id=transaction.related_item_id,
             related_background_id=transaction.related_background_id,
             description=transaction.description,
+            reward_date=transaction.reward_date,
             timestamp=transaction.timestamp,
         )
         saved_model = await super().add(model)
@@ -126,5 +127,6 @@ class SQLAlchemyTransactionsRepository(
             related_item_id=model.related_item_id,
             related_background_id=model.related_background_id,
             description=model.description,
+            reward_date=model.reward_date,
             timestamp=model.timestamp,
         )
