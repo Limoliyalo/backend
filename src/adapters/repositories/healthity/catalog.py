@@ -244,6 +244,10 @@ class SQLAlchemyBackgroundsRepository(
             required_level=background.required_level,
             is_available=background.is_available,
             picture_url=background.picture_url,
+            shop_url=background.shop_url,
+            profile_url=background.profile_url,
+            settings_url=background.settings_url,
+            friends_url=background.friends_url,
             created_at=background.created_at,
         )
         saved_model = await super().add(model)
@@ -262,6 +266,10 @@ class SQLAlchemyBackgroundsRepository(
             model.required_level = background.required_level
             model.is_available = background.is_available
             model.picture_url = background.picture_url
+            model.shop_url = background.shop_url
+            model.profile_url = background.profile_url
+            model.settings_url = background.settings_url
+            model.friends_url = background.friends_url
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -285,5 +293,9 @@ class SQLAlchemyBackgroundsRepository(
             required_level=model.required_level,
             is_available=model.is_available,
             picture_url=model.picture_url,
+            shop_url=model.shop_url,
+            profile_url=model.profile_url,
+            settings_url=model.settings_url,
+            friends_url=model.friends_url,
             created_at=model.created_at,
         )
