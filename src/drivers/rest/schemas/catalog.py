@@ -61,6 +61,10 @@ class BackgroundBase(BaseModel):
     required_level: int = Field(ge=1, description="Required level must be at least 1")
     is_available: bool = True
     picture_url: str | None = None
+    shop_url: str | None = None
+    profile_url: str | None = None
+    settings_url: str | None = None
+    friends_url: str | None = None
 
 
 class BackgroundCreate(BackgroundBase):
@@ -78,6 +82,10 @@ class BackgroundUpdate(BaseModel):
     )
     is_available: bool | None = None
     picture_url: str | None = None
+    shop_url: str | None = None
+    profile_url: str | None = None
+    settings_url: str | None = None
+    friends_url: str | None = None
 
 
 class ItemDelete(BaseModel):

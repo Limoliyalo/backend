@@ -54,6 +54,10 @@ class Background:
     required_level: int = 1
     is_available: bool = True
     picture_url: str | None = None
+    shop_url: str | None = None
+    profile_url: str | None = None
+    settings_url: str | None = None
+    friends_url: str | None = None
     created_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
     )

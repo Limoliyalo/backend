@@ -15,6 +15,10 @@ class CreateBackgroundInput:
     required_level: int = 1
     is_available: bool = True
     picture_url: str | None = None
+    shop_url: str | None = None
+    profile_url: str | None = None
+    settings_url: str | None = None
+    friends_url: str | None = None
 
 
 @dataclass
@@ -27,6 +31,10 @@ class UpdateBackgroundInput:
     required_level: int | None = None
     is_available: bool | None = None
     picture_url: str | None = None
+    shop_url: str | None = None
+    profile_url: str | None = None
+    settings_url: str | None = None
+    friends_url: str | None = None
 
 
 class CreateBackgroundUseCase:
@@ -43,6 +51,10 @@ class CreateBackgroundUseCase:
             required_level=data.required_level,
             is_available=data.is_available,
             picture_url=data.picture_url,
+            shop_url=data.shop_url,
+            profile_url=data.profile_url,
+            settings_url=data.settings_url,
+            friends_url=data.friends_url,
         )
         return await self._backgrounds_repository.add(background)
 
@@ -97,6 +109,14 @@ class UpdateBackgroundUseCase:
             background.is_available = data.is_available
         if data.picture_url is not None:
             background.picture_url = data.picture_url
+        if data.shop_url is not None:
+            background.shop_url = data.shop_url
+        if data.profile_url is not None:
+            background.profile_url = data.profile_url
+        if data.settings_url is not None:
+            background.settings_url = data.settings_url
+        if data.friends_url is not None:
+            background.friends_url = data.friends_url
 
         return await self._backgrounds_repository.update(background)
 

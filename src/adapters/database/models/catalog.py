@@ -105,6 +105,10 @@ class BackgroundModel(Base):
         server_default=text("true"),
     )
     picture_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    shop_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    profile_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    settings_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    friends_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

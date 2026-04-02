@@ -95,6 +95,10 @@ async def create_background(
         required_level=data.required_level,
         is_available=data.is_available,
         picture_url=data.picture_url,
+        shop_url=data.shop_url,
+        profile_url=data.profile_url,
+        settings_url=data.settings_url,
+        friends_url=data.friends_url,
     )
     try:
         background = await use_case.execute(input_data)
@@ -123,6 +127,10 @@ async def update_background(
             required_level=data.required_level,
             is_available=data.is_available,
             picture_url=data.picture_url,
+            shop_url=data.shop_url,
+            profile_url=data.profile_url,
+            settings_url=data.settings_url,
+            friends_url=data.friends_url,
         )
         background = await use_case.execute(input_data)
         return BackgroundResponse.model_validate(background)
