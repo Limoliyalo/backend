@@ -99,6 +99,52 @@ class SQLAlchemyUserFriendsRepository(
             models = result.scalars().all()
         return [self._to_domain(model) for model in models]
 
+    async def list_incoming_pending(self, user_tg_id: int) -> list[UserFriend]:
+        async with self._uow() as uow:
+            incoming_result = await uow.session.execute(
+                select(UserFriendModel)
+                .where(UserFriendModel.friend_tg_id == user_tg_id)
+                .order_by(UserFriendModel.created_at.desc())
+            )
+            outgoing_result = await uow.session.execute(
+                select(UserFriendModel.friend_tg_id).where(
+                    UserFriendModel.owner_tg_id == user_tg_id
+                )
+            )
+
+            outgoing_friend_ids = set(outgoing_result.scalars().all())
+            models = [
+                model
+                for model in incoming_result.scalars().all()
+                if model.owner_tg_id not in outgoing_friend_ids
+            ]
+
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_pair(
+        self, owner_tg_id: int, friend_tg_id: int
+    ) -> UserFriend | None:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(UserFriendModel).where(
+                    UserFriendModel.owner_tg_id == owner_tg_id,
+                    UserFriendModel.friend_tg_id == friend_tg_id,
+                )
+            )
+            model = result.scalar_one_or_none()
+
+        return self._to_domain(model) if model is not None else None
+
+    async def exists_pair(self, owner_tg_id: int, friend_tg_id: int) -> bool:
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(UserFriendModel.id).where(
+                    UserFriendModel.owner_tg_id == owner_tg_id,
+                    UserFriendModel.friend_tg_id == friend_tg_id,
+                )
+            )
+            return result.scalar_one_or_none() is not None
+
     async def add(self, friend: UserFriend) -> UserFriend:  # type: ignore[override]
         model = UserFriendModel(
             id=friend.id,
@@ -118,6 +164,11 @@ class SQLAlchemyUserFriendsRepository(
             )
             if result.rowcount == 0:
                 raise RepositoryError("Friend linkage not found")
+
+    async def remove_incoming_request(
+        self, user_tg_id: int, requester_tg_id: int
+    ) -> None:
+        await self.remove(owner_tg_id=requester_tg_id, friend_tg_id=user_tg_id)
 
     async def get_by_id(self, friend_id) -> UserFriend | None:
         async with self._uow() as uow:

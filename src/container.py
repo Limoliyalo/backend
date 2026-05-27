@@ -129,8 +129,11 @@ from src.use_cases.mood_history.manage_mood_history import (
 )
 from src.use_cases.user_friends.manage_user_friends import (
     AddFriendUseCase,
+    AcceptIncomingFriendRequestUseCase,
     CheckMutualFriendshipUseCase,
+    DeclineIncomingFriendRequestUseCase,
     GetUserFriendUseCase,
+    ListIncomingFriendRequestsUseCase,
     ListUserFriendsUseCase,
     RemoveFriendUseCase,
     UpdateUserFriendUseCase,
@@ -562,6 +565,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
     list_user_friends_use_case = providers.Factory(
         ListUserFriendsUseCase, user_friends_repository=user_friends_repository
     )
+    list_incoming_friend_requests_use_case = providers.Factory(
+        ListIncomingFriendRequestsUseCase,
+        user_friends_repository=user_friends_repository,
+    )
     get_user_friend_use_case = providers.Factory(
         GetUserFriendUseCase, user_friends_repository=user_friends_repository
     )
@@ -573,6 +580,14 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     remove_friend_use_case = providers.Factory(
         RemoveFriendUseCase, user_friends_repository=user_friends_repository
+    )
+    accept_incoming_friend_request_use_case = providers.Factory(
+        AcceptIncomingFriendRequestUseCase,
+        user_friends_repository=user_friends_repository,
+    )
+    decline_incoming_friend_request_use_case = providers.Factory(
+        DeclineIncomingFriendRequestUseCase,
+        user_friends_repository=user_friends_repository,
     )
     check_mutual_friendship_use_case = providers.Factory(
         CheckMutualFriendshipUseCase, user_friends_repository=user_friends_repository

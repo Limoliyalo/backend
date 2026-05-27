@@ -48,6 +48,17 @@ class UserFriendAdminDelete(BaseModel):
     friend_tg_id: int = Field(..., gt=0, description="Friend Telegram ID to delete")
 
 
+class IncomingFriendRequestResponse(BaseModel):
+    """Входящая заявка в друзья от другого пользователя"""
+
+    id: UUID
+    requester_tg_id: int
+    display_name: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class FriendInfoResponse(BaseModel):
     """Полная информация о друге"""
 

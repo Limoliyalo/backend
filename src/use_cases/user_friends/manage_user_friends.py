@@ -20,6 +20,14 @@ class ListUserFriendsUseCase:
         return await self._user_friends_repository.list_for_user(owner_tg_id)
 
 
+class ListIncomingFriendRequestsUseCase:
+    def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
+        self._user_friends_repository = user_friends_repository
+
+    async def execute(self, user_tg_id: int) -> list[UserFriend]:
+        return await self._user_friends_repository.list_incoming_pending(user_tg_id)
+
+
 class GetUserFriendUseCase:
     def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
         self._user_friends_repository = user_friends_repository
@@ -69,6 +77,58 @@ class RemoveFriendUseCase:
 
     async def execute(self, owner_tg_id: int, friend_tg_id: int) -> None:
         await self._user_friends_repository.remove(owner_tg_id, friend_tg_id)
+
+
+class AcceptIncomingFriendRequestUseCase:
+    def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
+        self._user_friends_repository = user_friends_repository
+
+    async def execute(self, user_tg_id: int, requester_tg_id: int) -> UserFriend:
+        if user_tg_id == requester_tg_id:
+            raise ValueError("Cannot accept friend request from yourself")
+
+        incoming = await self._user_friends_repository.get_by_pair(
+            owner_tg_id=requester_tg_id,
+            friend_tg_id=user_tg_id,
+        )
+        if incoming is None:
+            raise EntityNotFoundException("Incoming friend request not found")
+
+        existing_friendship = await self._user_friends_repository.get_by_pair(
+            owner_tg_id=user_tg_id,
+            friend_tg_id=requester_tg_id,
+        )
+        if existing_friendship is not None:
+            return existing_friendship
+
+        friend = UserFriend(
+            id=uuid.uuid4(),
+            owner_tg_id=user_tg_id,
+            friend_tg_id=requester_tg_id,
+        )
+        return await self._user_friends_repository.add(friend)
+
+
+class DeclineIncomingFriendRequestUseCase:
+    def __init__(self, user_friends_repository: UserFriendsRepository) -> None:
+        self._user_friends_repository = user_friends_repository
+
+    async def execute(self, user_tg_id: int, requester_tg_id: int) -> None:
+        incoming_exists = await self._user_friends_repository.exists_pair(
+            owner_tg_id=requester_tg_id,
+            friend_tg_id=user_tg_id,
+        )
+        outgoing_exists = await self._user_friends_repository.exists_pair(
+            owner_tg_id=user_tg_id,
+            friend_tg_id=requester_tg_id,
+        )
+        if not incoming_exists or outgoing_exists:
+            raise EntityNotFoundException("Incoming friend request not found")
+
+        await self._user_friends_repository.remove_incoming_request(
+            user_tg_id=user_tg_id,
+            requester_tg_id=requester_tg_id,
+        )
 
 
 class CheckMutualFriendshipUseCase:

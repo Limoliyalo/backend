@@ -28,11 +28,31 @@ class UserFriendsRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def list_incoming_pending(self, user_tg_id: int) -> list[UserFriend]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_pair(
+        self, owner_tg_id: int, friend_tg_id: int
+    ) -> UserFriend | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def exists_pair(self, owner_tg_id: int, friend_tg_id: int) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
     async def add(self, friend: UserFriend) -> UserFriend:
         raise NotImplementedError
 
     @abstractmethod
     async def remove(self, owner_tg_id: int, friend_tg_id: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def remove_incoming_request(
+        self, user_tg_id: int, requester_tg_id: int
+    ) -> None:
         raise NotImplementedError
 
     @abstractmethod

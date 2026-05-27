@@ -10,10 +10,12 @@ from src.adapters.repositories.exceptions import (
     RepositoryError,
 )
 from src.container import ApplicationContainer
+from src.domain.entities.healthity.users import UserFriend
 from src.domain.exceptions import EntityNotFoundException
 from src.drivers.rest.exceptions import BadRequestException, NotFoundException
 from src.drivers.rest.schemas.user_friends import (
     FriendInfoResponse,
+    IncomingFriendRequestResponse,
     UserFriendAdminDelete,
     UserFriendCreate,
     UserFriendDelete,
@@ -30,10 +32,13 @@ from src.drivers.rest.schemas.character_items import CharacterItemResponse
 from src.drivers.rest.schemas.characters import CharacterResponse
 from src.drivers.rest.schemas.transactions import TransactionResponse
 from src.use_cases.user_friends.manage_user_friends import (
+    AcceptIncomingFriendRequestUseCase,
     AddFriendInput,
     AddFriendUseCase,
     CheckMutualFriendshipUseCase,
+    DeclineIncomingFriendRequestUseCase,
     GetUserFriendUseCase,
+    ListIncomingFriendRequestsUseCase,
     ListUserFriendsUseCase,
     RemoveFriendUseCase,
     UpdateUserFriendInput,
@@ -54,6 +59,34 @@ from src.ports.repositories.healthity.transactions import TransactionsRepository
 router = APIRouter(prefix="/user-friends", tags=["User Friends"])
 
 
+def user_friend_response(friend: UserFriend) -> UserFriendResponse:
+    return UserFriendResponse(
+        id=friend.id,
+        owner_tg_id=friend.owner_tg_id,
+        friend_tg_id=friend.friend_tg_id,
+        created_at=friend.created_at,
+    )
+
+
+async def incoming_friend_request_response(
+    friend_request: UserFriend,
+    get_character_use_case: GetCharacterByUserUseCase,
+) -> IncomingFriendRequestResponse:
+    display_name = None
+    try:
+        character = await get_character_use_case.execute(friend_request.owner_tg_id)
+        display_name = character.name.strip() if character.name else None
+    except EntityNotFoundException:
+        display_name = None
+
+    return IncomingFriendRequestResponse(
+        id=friend_request.id,
+        requester_tg_id=friend_request.owner_tg_id,
+        display_name=display_name or None,
+        created_at=friend_request.created_at,
+    )
+
+
 @router.get(
     "/{owner_tg_id}/admin",
     response_model=list[UserFriendResponse],
@@ -69,15 +102,7 @@ async def list_user_friends(
 ):
     """Получить список друзей пользователя (требуется админ-доступ)"""
     friends = await use_case.execute(owner_tg_id)
-    return [
-        UserFriendResponse(
-            id=f.id,
-            owner_tg_id=f.owner_tg_id,
-            friend_tg_id=f.friend_tg_id,
-            created_at=f.created_at,
-        )
-        for f in friends
-    ]
+    return [user_friend_response(friend) for friend in friends]
 
 
 @router.get("/id/{friend_id}/admin", response_model=UserFriendResponse)
@@ -92,12 +117,7 @@ async def get_user_friend(
     """Получить запись друга по ID (требуется админ-доступ)"""
     try:
         friend = await use_case.execute(friend_id)
-        return UserFriendResponse(
-            id=friend.id,
-            owner_tg_id=friend.owner_tg_id,
-            friend_tg_id=friend.friend_tg_id,
-            created_at=friend.created_at,
-        )
+        return user_friend_response(friend)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -121,12 +141,7 @@ async def add_friend(
             owner_tg_id=data.owner_tg_id, friend_tg_id=data.friend_tg_id
         )
         friend = await use_case.execute(input_data)
-        return UserFriendResponse(
-            id=friend.id,
-            owner_tg_id=friend.owner_tg_id,
-            friend_tg_id=friend.friend_tg_id,
-            created_at=friend.created_at,
-        )
+        return user_friend_response(friend)
     except DuplicateEntityError:
         raise BadRequestException(detail="This user is already in the friend list")
     except ValueError as e:
@@ -148,12 +163,7 @@ async def update_user_friend(
             friend_id=data.friend_id, friend_tg_id=data.friend_tg_id
         )
         friend = await use_case.execute(input_data)
-        return UserFriendResponse(
-            id=friend.id,
-            owner_tg_id=friend.owner_tg_id,
-            friend_tg_id=friend.friend_tg_id,
-            created_at=friend.created_at,
-        )
+        return user_friend_response(friend)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
@@ -188,15 +198,7 @@ async def list_my_friends(
     """Получить список своих друзей"""
 
     friends = await use_case.execute(telegram_id)
-    return [
-        UserFriendResponse(
-            id=friend.id,
-            owner_tg_id=friend.owner_tg_id,
-            friend_tg_id=friend.friend_tg_id,
-            created_at=friend.created_at,
-        )
-        for friend in friends
-    ]
+    return [user_friend_response(friend) for friend in friends]
 
 
 @router.post(
@@ -217,12 +219,7 @@ async def add_my_friend(
             owner_tg_id=telegram_id, friend_tg_id=data.friend_tg_id
         )
         friend = await use_case.execute(input_data)
-        return UserFriendResponse(
-            id=friend.id,
-            owner_tg_id=friend.owner_tg_id,
-            friend_tg_id=friend.friend_tg_id,
-            created_at=friend.created_at,
-        )
+        return user_friend_response(friend)
     except DuplicateEntityError:
         raise BadRequestException(detail="This user is already in your friends list")
     except ValueError as e:
@@ -243,6 +240,82 @@ async def remove_my_friend(
     try:
         await use_case.execute(telegram_id, data.friend_tg_id)
     except RepositoryError as e:
+        raise NotFoundException(detail=str(e))
+
+
+@router.get(
+    "/me/incoming",
+    response_model=list[IncomingFriendRequestResponse],
+    status_code=status.HTTP_200_OK,
+)
+@inject
+async def list_my_incoming_friend_requests(
+    telegram_id: int = Depends(get_telegram_current_user),
+    use_case: ListIncomingFriendRequestsUseCase = Depends(
+        Provide[ApplicationContainer.list_incoming_friend_requests_use_case]
+    ),
+    get_character_use_case: GetCharacterByUserUseCase = Depends(
+        Provide[ApplicationContainer.get_character_by_user_use_case]
+    ),
+):
+    """Получить входящие заявки в друзья"""
+
+    requests = await use_case.execute(telegram_id)
+    return [
+        await incoming_friend_request_response(request, get_character_use_case)
+        for request in requests
+    ]
+
+
+@router.post(
+    "/me/incoming/{requester_tg_id}/accept",
+    response_model=UserFriendResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@inject
+async def accept_my_incoming_friend_request(
+    requester_tg_id: int,
+    telegram_id: int = Depends(get_telegram_current_user),
+    use_case: AcceptIncomingFriendRequestUseCase = Depends(
+        Provide[ApplicationContainer.accept_incoming_friend_request_use_case]
+    ),
+):
+    """Принять входящую заявку в друзья"""
+
+    try:
+        friend = await use_case.execute(
+            user_tg_id=telegram_id,
+            requester_tg_id=requester_tg_id,
+        )
+        return user_friend_response(friend)
+    except EntityNotFoundException as e:
+        raise NotFoundException(detail=str(e))
+    except DuplicateEntityError:
+        raise BadRequestException(detail="This user is already in your friends list")
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
+
+
+@router.delete(
+    "/me/incoming/{requester_tg_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@inject
+async def decline_my_incoming_friend_request(
+    requester_tg_id: int,
+    telegram_id: int = Depends(get_telegram_current_user),
+    use_case: DeclineIncomingFriendRequestUseCase = Depends(
+        Provide[ApplicationContainer.decline_incoming_friend_request_use_case]
+    ),
+):
+    """Отклонить входящую заявку в друзья"""
+
+    try:
+        await use_case.execute(
+            user_tg_id=telegram_id,
+            requester_tg_id=requester_tg_id,
+        )
+    except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
 
 
