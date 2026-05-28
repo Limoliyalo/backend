@@ -142,6 +142,7 @@ async def create_position(
         position_x=data.position_x,
         position_y=data.position_y,
         position_z=data.position_z,
+        size=data.size,
     )
     position = await use_case.execute(input_data)
     return ItemBackgroundPositionResponse.model_validate(position)
@@ -167,6 +168,7 @@ async def update_position(
             position_x=data.position_x,
             position_y=data.position_y,
             position_z=data.position_z,
+            size=data.size,
         )
         position = await use_case.execute(input_data)
         return ItemBackgroundPositionResponse.model_validate(position)

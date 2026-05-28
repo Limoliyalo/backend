@@ -352,8 +352,8 @@ async def equip_user_background(
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
-    get_background_use_case: GetCharacterBackgroundUseCase = Depends(
-        Provide[ApplicationContainer.get_character_background_use_case]
+    list_backgrounds_use_case: ListCharacterBackgroundsUseCase = Depends(
+        Provide[ApplicationContainer.list_character_backgrounds_use_case]
     ),
 ):
     """Экипировать фон"""
@@ -361,12 +361,21 @@ async def equip_user_background(
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id)
 
-        # Проверяем, что фон принадлежит персонажу пользователя
-        background = await get_background_use_case.execute(request.background_id)
-        if background.character_id != character.id:
+        # Запрос принимает catalog background_id, а equip use case работает
+        # с id записи character_backgrounds.
+        backgrounds = await list_backgrounds_use_case.execute(character.id)
+        character_background = next(
+            (
+                background
+                for background in backgrounds
+                if background.background_id == request.background_id
+            ),
+            None,
+        )
+        if character_background is None or not character_background.is_purchased:
             raise NotFoundException("Character background not found")
 
-        background = await use_case.execute(request.background_id)
+        background = await use_case.execute(character_background.id)
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
@@ -385,8 +394,8 @@ async def unequip_user_background(
     get_character_use_case: GetCharacterByUserUseCase = Depends(
         Provide[ApplicationContainer.get_character_by_user_use_case]
     ),
-    get_background_use_case: GetCharacterBackgroundUseCase = Depends(
-        Provide[ApplicationContainer.get_character_background_use_case]
+    list_backgrounds_use_case: ListCharacterBackgroundsUseCase = Depends(
+        Provide[ApplicationContainer.list_character_backgrounds_use_case]
     ),
 ):
     """Снять фон"""
@@ -394,12 +403,21 @@ async def unequip_user_background(
         # Сначала получаем персонажа пользователя
         character = await get_character_use_case.execute(telegram_id)
 
-        # Проверяем, что фон принадлежит персонажу пользователя
-        background = await get_background_use_case.execute(request.background_id)
-        if background.character_id != character.id:
+        # Запрос принимает catalog background_id, а unequip use case работает
+        # с id записи character_backgrounds.
+        backgrounds = await list_backgrounds_use_case.execute(character.id)
+        character_background = next(
+            (
+                background
+                for background in backgrounds
+                if background.background_id == request.background_id
+            ),
+            None,
+        )
+        if character_background is None or not character_background.is_purchased:
             raise NotFoundException("Character background not found")
 
-        background = await use_case.execute(request.background_id)
+        background = await use_case.execute(character_background.id)
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")

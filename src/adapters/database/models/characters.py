@@ -188,3 +188,8 @@ class ItemBackgroundPositionModel(Base):
         nullable=False,
         server_default=text("0"),
     )
+    size: Mapped[float] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+        server_default=text("0"),
+    )

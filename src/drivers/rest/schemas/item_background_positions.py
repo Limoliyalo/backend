@@ -11,6 +11,10 @@ class ItemBackgroundPositionBase(BaseModel):
     position_x: float = Field(..., description="X position")
     position_y: float = Field(..., description="Y position")
     position_z: float = Field(default=0.0, description="Z position")
+    size: float = Field(
+        default=0.0,
+        description="Size adjustment in percent. 0 keeps default size, negative shrinks, positive grows.",
+    )
 
 
 class ItemBackgroundPositionCreate(ItemBackgroundPositionBase):
@@ -22,6 +26,10 @@ class ItemBackgroundPositionUpdate(BaseModel):
     position_x: float = Field(..., description="X position")
     position_y: float = Field(..., description="Y position")
     position_z: float = Field(default=0.0, description="Z position")
+    size: float = Field(
+        default=0.0,
+        description="Size adjustment in percent. 0 keeps default size, negative shrinks, positive grows.",
+    )
 
 
 class ItemBackgroundPositionDelete(BaseModel):

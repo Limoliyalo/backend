@@ -17,6 +17,7 @@ class CreatePositionInput:
     position_x: float
     position_y: float
     position_z: float = 0.0
+    size: float = 0.0
 
 
 @dataclass
@@ -25,6 +26,7 @@ class UpdatePositionInput:
     position_x: float
     position_y: float
     position_z: float = 0.0
+    size: float = 0.0
 
 
 class ListPositionsForItemUseCase:
@@ -79,6 +81,7 @@ class CreatePositionUseCase:
             position_x=data.position_x,
             position_y=data.position_y,
             position_z=data.position_z,
+            size=data.size,
         )
         return await self._positions_repository.add(position)
 
@@ -97,6 +100,7 @@ class UpdatePositionUseCase:
         position.position_x = data.position_x
         position.position_y = data.position_y
         position.position_z = data.position_z
+        position.size = data.size
 
         return await self._positions_repository.update(position)
 

@@ -90,3 +90,4 @@ class ItemBackgroundPosition:
     position_x: float
     position_y: float
     position_z: float = 0.0
+    size: float = 0.0

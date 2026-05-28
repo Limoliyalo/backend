@@ -321,6 +321,7 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             position_x=position.position_x,
             position_y=position.position_y,
             position_z=position.position_z,
+            size=position.size,
         )
         saved_model = await super().add(model)
         return self._to_domain(saved_model)
@@ -334,6 +335,7 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             model.position_x = position.position_x
             model.position_y = position.position_y
             model.position_z = position.position_z
+            model.size = position.size
 
             await uow.session.flush()
             await uow.session.refresh(model)
@@ -386,4 +388,5 @@ class SQLAlchemyItemBackgroundPositionsRepository(
             position_x=float(model.position_x),
             position_y=float(model.position_y),
             position_z=float(model.position_z),
+            size=float(model.size),
         )
