@@ -57,16 +57,11 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @inject
 async def register_user(
     data: UserRegister,
-    telegram_id: int = Depends(get_telegram_current_user),
     use_case: CreateUserUseCase = Depends(
         Provide[ApplicationContainer.create_user_use_case]
     ),
 ):
-    """Регистрация пользователя по валидированным Telegram Mini App данным."""
-    if data.telegram_id != telegram_id:
-        raise ForbiddenException(
-            detail="Registration telegram_id does not match auth user"
-        )
+    """Регистрация пользователя по Telegram ID."""
 
     logger.info(
         {

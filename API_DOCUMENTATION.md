@@ -42,7 +42,6 @@
 ### Регистрация пользователя
 ```http
 POST /users/register
-Authorization: Bearer {telegram_init_data}
 Content-Type: application/json
 
 {
@@ -50,6 +49,9 @@ Content-Type: application/json
   "password": "user_password"  // опционально - можно не указывать, минимум 6 символов
 }
 ```
+
+Registration is a legacy public compatibility endpoint. Other user-specific
+endpoints still require `Authorization: Bearer {telegram_init_data}`.
 
 **Response:**
 ```json

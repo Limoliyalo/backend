@@ -164,20 +164,18 @@ def minimal_settings(**overrides) -> Settings:
     return Settings(**data)
 
 
-def test_register_rejects_client_telegram_id_mismatch() -> None:
+def test_register_allows_legacy_client_telegram_id_registration() -> None:
     use_case = RecordingCreateUserUseCase()
 
     async def run() -> None:
         await register_user(
             UserRegister(telegram_id=111),
-            telegram_id=222,
             use_case=use_case,
         )
 
-    with pytest.raises(ForbiddenException):
-        asyncio.run(run())
+    asyncio.run(run())
 
-    assert use_case.called is False
+    assert use_case.called is True
 
 
 def test_self_service_deposit_is_disabled() -> None:

@@ -251,7 +251,6 @@ poetry run alembic downgrade -1
 **Регистрация пользователя:**
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/register \
-  -H "Authorization: Bearer {telegram_init_data}" \
   -H "Content-Type: application/json" \
   -d '{"telegram_id": 123456789, "password": "optional_password"}'
 ```

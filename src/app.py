@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
         }
 
         # Add security requirements to specific paths
-        public_endpoints = ["/catalog"]
+        public_endpoints = ["/catalog", "/users/register"]
 
         for path, path_item in openapi_schema["paths"].items():
             for _, operation in path_item.items():
