@@ -1,6 +1,6 @@
 from collections.abc import Callable
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import delete, select
 
@@ -9,6 +9,7 @@ from src.adapters.database.models.activities import (
     BaseCharacterActivityModel,
     CharacterActivityHistoryModel,
     DailyProgressModel,
+    FoodEntryModel,
     MoodHistoryModel,
 )
 from src.adapters.database.uow import AbstractUnitOfWork
@@ -18,6 +19,7 @@ from src.domain.entities.healthity.activities import (
     BaseCharacterActivity,
     CharacterActivityHistory,
     DailyProgress,
+    FoodEntry,
     MoodHistory,
 )
 from src.ports.repositories.healthity.activities import (
@@ -25,6 +27,7 @@ from src.ports.repositories.healthity.activities import (
     BaseCharacterActivitiesRepository,
     DailyActivitiesRepository,
     DailyProgressRepository,
+    FoodEntriesRepository,
     MoodHistoryRepository,
 )
 
@@ -215,6 +218,104 @@ class SQLAlchemyDailyActivitiesRepository(
             date=model.date,
             value=model.value,
             goal=model.goal,
+            notes=model.notes,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
+
+
+class SQLAlchemyFoodEntriesRepository(
+    SQLAlchemyRepository[FoodEntryModel], FoodEntriesRepository
+):
+    model = FoodEntryModel
+
+    def __init__(self, uow_factory: Callable[[], AbstractUnitOfWork]) -> None:
+        super().__init__(uow_factory)
+
+    async def list_for_day(
+        self, character_id: uuid.UUID, day: datetime
+    ) -> list[FoodEntry]:
+        normalized_day = day
+        if normalized_day.tzinfo is not None:
+            normalized_day = normalized_day.replace(tzinfo=None)
+        day_start = normalized_day.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+
+        async with self._uow() as uow:
+            result = await uow.session.execute(
+                select(FoodEntryModel)
+                .where(
+                    FoodEntryModel.character_id == character_id,
+                    FoodEntryModel.consumed_at >= day_start,
+                    FoodEntryModel.consumed_at < day_end,
+                )
+                .order_by(FoodEntryModel.consumed_at.desc())
+            )
+            models = result.scalars().all()
+        return [self._to_domain(model) for model in models]
+
+    async def get_by_id(self, entry_id: uuid.UUID) -> FoodEntry | None:
+        async with self._uow() as uow:
+            model = await uow.session.get(FoodEntryModel, entry_id)
+            if model is None:
+                return None
+            return self._to_domain(model)
+
+    async def add(self, entry: FoodEntry) -> FoodEntry:  # type: ignore[override]
+        model = FoodEntryModel(
+            id=entry.id,
+            character_id=entry.character_id,
+            consumed_at=entry.consumed_at,
+            meal_type=entry.meal_type,
+            title=entry.title,
+            calories=entry.calories,
+            protein_g=entry.protein_g,
+            fat_g=entry.fat_g,
+            carbs_g=entry.carbs_g,
+            notes=entry.notes,
+            created_at=entry.created_at,
+            updated_at=entry.updated_at,
+        )
+        saved_model = await super().add(model)
+        return self._to_domain(saved_model)
+
+    async def update(self, entry: FoodEntry) -> FoodEntry:
+        async with self._uow() as uow:
+            model = await uow.session.get(FoodEntryModel, entry.id)
+            if model is None:
+                raise ValueError("FoodEntry not found")
+
+            model.consumed_at = entry.consumed_at
+            model.meal_type = entry.meal_type
+            model.title = entry.title
+            model.calories = entry.calories
+            model.protein_g = entry.protein_g
+            model.fat_g = entry.fat_g
+            model.carbs_g = entry.carbs_g
+            model.notes = entry.notes
+
+            await uow.session.flush()
+            await uow.session.refresh(model)
+            return self._to_domain(model)
+
+    async def delete(self, entry_id: uuid.UUID) -> None:  # type: ignore[override]
+        async with self._uow() as uow:
+            await uow.session.execute(
+                delete(FoodEntryModel).where(FoodEntryModel.id == entry_id)
+            )
+
+    @staticmethod
+    def _to_domain(model: FoodEntryModel) -> FoodEntry:
+        return FoodEntry(
+            id=model.id,
+            character_id=model.character_id,
+            consumed_at=model.consumed_at,
+            meal_type=model.meal_type,
+            title=model.title,
+            calories=model.calories,
+            protein_g=model.protein_g,
+            fat_g=model.fat_g,
+            carbs_g=model.carbs_g,
             notes=model.notes,
             created_at=model.created_at,
             updated_at=model.updated_at,

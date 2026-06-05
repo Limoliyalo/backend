@@ -53,6 +53,29 @@ class CharacterActivityHistory:
 
 
 @dataclass
+class FoodEntry:
+    id: uuid.UUID
+    character_id: uuid.UUID
+    consumed_at: datetime
+    meal_type: str
+    title: str | None
+    calories: int
+    protein_g: int | None = None
+    fat_g: int | None = None
+    carbs_g: int | None = None
+    notes: str | None = None
+    created_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+    updated_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
+
+    def touch(self) -> None:
+        self.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+@dataclass
 class DailyProgress:
     id: uuid.UUID
     character_id: uuid.UUID

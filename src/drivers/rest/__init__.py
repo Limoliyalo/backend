@@ -10,6 +10,7 @@ __all__ = [
     "character_items",
     "daily_activities",
     "daily_progress",
+    "food_entries",
     "items",
     "item_categories",
     "item_background_positions",

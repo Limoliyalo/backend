@@ -111,6 +111,45 @@ class CharacterActivityHistoryModel(TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class FoodEntryModel(TimestampMixin, Base):
+    __tablename__ = "food_entries"
+    __table_args__ = (
+        Index("idx_food_entries_character_consumed_at", "character_id", "consumed_at"),
+        CheckConstraint("calories > 0", name="ck_food_entries_calories_positive"),
+        CheckConstraint(
+            "protein_g >= 0 OR protein_g IS NULL",
+            name="ck_food_entries_protein_non_negative",
+        ),
+        CheckConstraint(
+            "fat_g >= 0 OR fat_g IS NULL",
+            name="ck_food_entries_fat_non_negative",
+        ),
+        CheckConstraint(
+            "carbs_g >= 0 OR carbs_g IS NULL",
+            name="ck_food_entries_carbs_non_negative",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    character_id: Mapped[uuid.UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("characters.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    meal_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    calories: Mapped[int] = mapped_column(Integer, nullable=False)
+    protein_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fat_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    carbs_g: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class DailyProgressModel(TimestampMixin, Base):
     __tablename__ = "daily_progress"
     __table_args__ = (

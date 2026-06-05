@@ -1,0 +1,1 @@
+"""Food entry use cases."""

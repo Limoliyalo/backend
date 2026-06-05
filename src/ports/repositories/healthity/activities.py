@@ -7,6 +7,7 @@ from src.domain.entities.healthity.activities import (
     BaseCharacterActivity,
     CharacterActivityHistory,
     DailyProgress,
+    FoodEntry,
     MoodHistory,
 )
 
@@ -76,6 +77,30 @@ class DailyActivitiesRepository(ABC):
 
     @abstractmethod
     async def delete(self, activity_id: uuid.UUID) -> None:
+        raise NotImplementedError
+
+
+class FoodEntriesRepository(ABC):
+    @abstractmethod
+    async def list_for_day(
+        self, character_id: uuid.UUID, day: datetime
+    ) -> list[FoodEntry]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_by_id(self, entry_id: uuid.UUID) -> FoodEntry | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def add(self, entry: FoodEntry) -> FoodEntry:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def update(self, entry: FoodEntry) -> FoodEntry:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def delete(self, entry_id: uuid.UUID) -> None:
         raise NotImplementedError
 
 

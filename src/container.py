@@ -15,6 +15,7 @@ from src.adapters.repositories.healthity import (
     SQLAlchemyCharactersRepository,
     SQLAlchemyDailyActivitiesRepository,
     SQLAlchemyDailyProgressRepository,
+    SQLAlchemyFoodEntriesRepository,
     SQLAlchemyItemBackgroundPositionsRepository,
     SQLAlchemyItemCategoriesRepository,
     SQLAlchemyItemsRepository,
@@ -110,6 +111,12 @@ from src.use_cases.daily_activities.manage_daily_activities import (
     UpdateDailyActivityUseCase,
 )
 from src.use_cases.daily_activities.recalculate_xp import RecalculateDailyXpUseCase
+from src.use_cases.food_entries.manage_food_entries import (
+    CreateFoodEntryUseCase,
+    DeleteFoodEntryUseCase,
+    ListFoodEntriesForDayUseCase,
+    UpdateFoodEntryUseCase,
+)
 from src.use_cases.rewards.daily_reward import RunDailyRewardsUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
     CreateDailyProgressUseCase,
@@ -237,6 +244,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     daily_activities_repository = providers.Factory(
         SQLAlchemyDailyActivitiesRepository, uow_factory=unit_of_work.provider
+    )
+    food_entries_repository = providers.Factory(
+        SQLAlchemyFoodEntriesRepository, uow_factory=unit_of_work.provider
     )
     base_character_activities_repository = providers.Factory(
         SQLAlchemyBaseCharacterActivitiesRepository, uow_factory=unit_of_work.provider
@@ -483,6 +493,31 @@ class ApplicationContainer(containers.DeclarativeContainer):
         daily_activities_repository=daily_activities_repository,
         daily_progress_repository=daily_progress_repository,
         characters_repository=characters_repository,
+    )
+    list_food_entries_for_day_use_case = providers.Factory(
+        ListFoodEntriesForDayUseCase,
+        food_entries_repository=food_entries_repository,
+    )
+    create_food_entry_use_case = providers.Factory(
+        CreateFoodEntryUseCase,
+        food_entries_repository=food_entries_repository,
+        daily_activities_repository=daily_activities_repository,
+        base_activities_repository=base_character_activities_repository,
+        activity_types_repository=activity_types_repository,
+    )
+    update_food_entry_use_case = providers.Factory(
+        UpdateFoodEntryUseCase,
+        food_entries_repository=food_entries_repository,
+        daily_activities_repository=daily_activities_repository,
+        base_activities_repository=base_character_activities_repository,
+        activity_types_repository=activity_types_repository,
+    )
+    delete_food_entry_use_case = providers.Factory(
+        DeleteFoodEntryUseCase,
+        food_entries_repository=food_entries_repository,
+        daily_activities_repository=daily_activities_repository,
+        base_activities_repository=base_character_activities_repository,
+        activity_types_repository=activity_types_repository,
     )
     run_daily_rewards_use_case = providers.Factory(
         RunDailyRewardsUseCase,

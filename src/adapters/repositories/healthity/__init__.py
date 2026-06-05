@@ -19,6 +19,7 @@ from src.adapters.repositories.healthity.activities import (
     SQLAlchemyBaseCharacterActivitiesRepository,
     SQLAlchemyDailyActivitiesRepository,
     SQLAlchemyDailyProgressRepository,
+    SQLAlchemyFoodEntriesRepository,
     SQLAlchemyMoodHistoryRepository,
 )
 from src.adapters.repositories.healthity.transactions import (
@@ -40,6 +41,7 @@ __all__ = [
     "SQLAlchemyBaseCharacterActivitiesRepository",
     "SQLAlchemyDailyActivitiesRepository",
     "SQLAlchemyDailyProgressRepository",
+    "SQLAlchemyFoodEntriesRepository",
     "SQLAlchemyMoodHistoryRepository",
     "SQLAlchemyTransactionsRepository",
 ]
