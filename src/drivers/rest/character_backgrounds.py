@@ -74,6 +74,8 @@ async def get_character_background(
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 
@@ -125,6 +127,8 @@ async def update_character_background(
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 
@@ -143,6 +147,8 @@ async def delete_character_background(
         await use_case.execute(data.background_id)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 
@@ -162,6 +168,8 @@ async def equip_background(
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 
@@ -327,6 +335,8 @@ async def update_user_character_background(
         )
         if background.character_id != character.id:
             raise NotFoundException("Character background not found")
+        if background_data.is_active and not background.is_purchased:
+            raise NotFoundException("Character background not found")
 
         input_data = UpdateCharacterBackgroundInput(
             character_background_id=background_data.background_id,
@@ -337,6 +347,8 @@ async def update_user_character_background(
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 
@@ -379,6 +391,8 @@ async def equip_user_background(
         return CharacterBackgroundResponse.model_validate(background)
     except EntityNotFoundException:
         raise NotFoundException("Character background not found")
+    except ValueError as e:
+        raise BadRequestException(str(e))
     except RepositoryError as e:
         raise BadRequestException(f"Database error: {str(e)}")
 

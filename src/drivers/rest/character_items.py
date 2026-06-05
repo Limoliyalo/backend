@@ -68,6 +68,8 @@ async def get_character_item(
         return CharacterItemResponse.model_validate(item)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.post(
@@ -112,6 +114,8 @@ async def update_character_item(
         return CharacterItemResponse.model_validate(item)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.delete("/admin", status_code=status.HTTP_204_NO_CONTENT)
@@ -153,11 +157,15 @@ async def equip_my_item(
 
         if item.character_id != character.id:
             raise NotFoundException(detail="Item does not belong to your character")
+        if not item.is_purchased:
+            raise NotFoundException(detail="Item does not belong to your character")
 
         updated_item = await use_case.execute(request.character_item_id)
         return CharacterItemResponse.model_validate(updated_item)
     except EntityNotFoundException as e:
         raise NotFoundException(detail=str(e))
+    except ValueError as e:
+        raise BadRequestException(detail=str(e))
 
 
 @router.patch("/me/unequip", response_model=CharacterItemResponse)

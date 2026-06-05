@@ -2,12 +2,12 @@ import uuid
 from dataclasses import dataclass
 
 from src.domain.entities.healthity.characters import CharacterBackground
-from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
 from src.ports.repositories.healthity.catalog import BackgroundsRepository
-from src.ports.repositories.healthity.characters import CharacterBackgroundsRepository
-from src.ports.repositories.healthity.transactions import TransactionsRepository
-from src.ports.repositories.healthity.users import UsersRepository
+from src.ports.repositories.healthity.characters import (
+    CharacterBackgroundsRepository,
+    CharactersRepository,
+)
 
 
 @dataclass
@@ -60,6 +60,7 @@ class PurchaseBackgroundUseCase:
             background_id=data.background_id,
             is_active=data.is_active,
             is_favorite=data.is_favorite,
+            is_purchased=True,
         )
         return await self._character_backgrounds_repository.add(background)
 
@@ -256,13 +257,11 @@ class PurchaseBackgroundWithBalanceUseCase:
         self,
         character_backgrounds_repository: CharacterBackgroundsRepository,
         backgrounds_repository: BackgroundsRepository,
-        users_repository: UsersRepository,
-        transactions_repository: TransactionsRepository,
+        characters_repository: CharactersRepository,
     ) -> None:
         self._character_backgrounds_repository = character_backgrounds_repository
         self._backgrounds_repository = backgrounds_repository
-        self._users_repository = users_repository
-        self._transactions_repository = transactions_repository
+        self._characters_repository = characters_repository
 
     async def execute(
         self, data: PurchaseBackgroundWithBalanceInput
@@ -275,61 +274,20 @@ class PurchaseBackgroundWithBalanceUseCase:
         if not background.is_available:
             raise ValueError("Background is not available for purchase")
 
-        existing_backgrounds = (
-            await self._character_backgrounds_repository.list_for_character(
-                data.character_id
-            )
-        )
-        existing_background = next(
-            (
-                cb
-                for cb in existing_backgrounds
-                if cb.background_id == data.background_id
-            ),
-            None,
-        )
+        character = await self._characters_repository.get_by_id(data.character_id)
+        if character is None:
+            raise EntityNotFoundException(f"Character {data.character_id} not found")
 
-        telegram_id = data.user_tg_id
-        user = await self._users_repository.get_by_telegram_id(telegram_id)
-        if user is None:
-            raise EntityNotFoundException(f"User {data.user_tg_id} not found")
+        if character.user_tg_id != data.user_tg_id:
+            raise ValueError("Character does not belong to user")
 
-        # Если фон уже есть в избранном, просто помечаем как купленный
-        if existing_background:
-            if existing_background.is_purchased:
-                raise ValueError("Background already purchased")
-            existing_background.is_purchased = True
-            updated_background = await self._character_backgrounds_repository.update(
-                existing_background
-            )
-            user.withdraw(background.cost)
-            updated_user = await self._users_repository.update(user)
-            created_background = updated_background
-        else:
-            user.withdraw(background.cost)
-            updated_user = await self._users_repository.update(user)
+        if character.level < background.required_level:
+            raise ValueError(f"Background requires level {background.required_level}")
 
-            character_background = CharacterBackground(
-                id=uuid.uuid4(),
-                character_id=data.character_id,
-                background_id=data.background_id,
-                is_active=False,
-                is_favorite=False,
-                is_purchased=True,
-            )
-            created_background = await self._character_backgrounds_repository.add(
-                character_background
-            )
-
-        transaction = Transaction(
-            id=uuid.uuid4(),
-            user_tg_id=telegram_id,
-            amount=-background.cost,
-            balance_after=updated_user.balance,
-            type="purchase_background",
-            related_background_id=data.background_id,
+        return await self._character_backgrounds_repository.purchase_with_balance(
+            user_tg_id=data.user_tg_id,
+            character_id=data.character_id,
+            background_id=data.background_id,
+            cost=background.cost,
             description=f"Покупка фона: {background.name}",
         )
-        await self._transactions_repository.add(transaction)
-
-        return created_background

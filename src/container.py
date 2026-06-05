@@ -627,8 +627,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
         PurchaseItemWithBalanceUseCase,
         character_items_repository=character_items_repository,
         items_repository=items_repository,
-        users_repository=users_repository,
-        transactions_repository=transactions_repository,
+        characters_repository=characters_repository,
     )
 
     list_character_backgrounds_use_case = providers.Factory(
@@ -668,8 +667,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
         PurchaseBackgroundWithBalanceUseCase,
         character_backgrounds_repository=character_backgrounds_repository,
         backgrounds_repository=backgrounds_repository,
-        users_repository=users_repository,
-        transactions_repository=transactions_repository,
+        characters_repository=characters_repository,
     )
 
     list_item_categories_use_case = providers.Factory(

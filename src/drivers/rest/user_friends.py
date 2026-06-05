@@ -25,12 +25,10 @@ from src.drivers.rest.schemas.user_friends import (
 )
 from src.drivers.rest.schemas.activities import (
     BaseCharacterActivityResponse,
-    MoodHistoryResponse,
 )
 from src.drivers.rest.schemas.character_backgrounds import CharacterBackgroundResponse
 from src.drivers.rest.schemas.character_items import CharacterItemResponse
 from src.drivers.rest.schemas.characters import CharacterResponse
-from src.drivers.rest.schemas.transactions import TransactionResponse
 from src.use_cases.user_friends.manage_user_friends import (
     AcceptIncomingFriendRequestUseCase,
     AddFriendInput,
@@ -52,9 +50,7 @@ from src.ports.repositories.healthity.characters import (
 )
 from src.ports.repositories.healthity.activities import (
     BaseCharacterActivitiesRepository,
-    MoodHistoryRepository,
 )
-from src.ports.repositories.healthity.transactions import TransactionsRepository
 
 router = APIRouter(prefix="/user-friends", tags=["User Friends"])
 
@@ -339,12 +335,6 @@ async def get_friend_info(
     backgrounds_repo: CharacterBackgroundsRepository = Depends(
         Provide[ApplicationContainer.character_backgrounds_repository]
     ),
-    mood_repo: MoodHistoryRepository = Depends(
-        Provide[ApplicationContainer.mood_history_repository]
-    ),
-    transactions_repo: TransactionsRepository = Depends(
-        Provide[ApplicationContainer.transactions_repository]
-    ),
     base_activities_repo: BaseCharacterActivitiesRepository = Depends(
         Provide[ApplicationContainer.base_character_activities_repository]
     ),
@@ -394,22 +384,8 @@ async def get_friend_info(
                 for act in activities
             ]
 
-            # Получаем mood history
-            mood_entries = await mood_repo.list_for_character(character_id, limit=10000)
-            mood_history = [
-                MoodHistoryResponse.model_validate(mood).model_dump()
-                for mood in mood_entries
-            ]
-
         except EntityNotFoundException:
             pass  # No character found for friend
-
-        # Получаем transactions
-        transactions_list = await transactions_repo.list_for_user(friend_tg_id)
-        transactions = [
-            TransactionResponse.model_validate(t).model_dump()
-            for t in transactions_list
-        ]
 
         return FriendInfoResponse(
             user_tg_id=friend_tg_id,

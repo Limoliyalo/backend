@@ -42,6 +42,7 @@
 ### Регистрация пользователя
 ```http
 POST /users/register
+Authorization: Bearer {telegram_init_data}
 Content-Type: application/json
 
 {
@@ -56,7 +57,6 @@ Content-Type: application/json
   "telegram_id": 123456789,
   "is_active": true,
   "balance": 0,
-  "password_hash": "...",
   "created_at": "2025-10-12T12:00:00Z",
   "updated_at": "2025-10-12T12:00:00Z"
 }
@@ -120,7 +120,7 @@ Authorization: Bearer {telegram_init_data}
 **Пример использования:**
 ```http
 GET /users/me
-Authorization: Bearer query_id=AAH1e70nAAAAAPV7vSdqEVvS&user=%7B%22id%22%3A666729461%2C%22first_name%22%3A%22tired%22%7D&auth_date=1763925001&hash=3d381fc6aed11b4bba29e5f933be821d06434e4b3e3fc3d1794f81fef834d4eb
+Authorization: Bearer {telegram_init_data}
 ```
 
 ---
@@ -139,7 +139,6 @@ Authorization: Bearer {telegram_init_data}
   "telegram_id": 123456789,
   "is_active": true,
   "balance": 1000,
-  "password_hash": "...",
   "created_at": "2025-10-12T12:00:00Z",
   "updated_at": "2025-10-12T12:00:00Z"
 }
@@ -155,6 +154,8 @@ Content-Type: application/json
   "amount": 100
 }
 ```
+
+**Response:** `403 Forbidden`. Самостоятельное начисление баланса отключено; баланс меняется только серверной бизнес-логикой или админскими операциями.
 
 ### 💸 Списать средства с баланса
 ```http
@@ -1297,12 +1298,12 @@ Content-Type: application/json
 
 {
   "date": "2025-10-12T00:00:00Z",
-  "experience_gained": 50,
   "mood_average": "happy",
   "behavior_index": 85
 }
 ```
 
+**Примечание:** пользовательский endpoint не принимает `experience_gained`; опыт пересчитывается сервером из активностей или задается через админские endpoints.
 **Примечание:** `mood_average` может быть: `neutral`, `happy`, `sad`, `angry`, `bored`.
 
 ### 🔧 Админские эндпоинты
@@ -1630,8 +1631,8 @@ Authorization: Bearer {telegram_init_data}
   "character_items": [...],
   "character_backgrounds": [...],
   "base_activities": [...],
-  "mood_history": [...],
-  "transactions": [...]
+  "mood_history": [],
+  "transactions": []
 }
 ```
 

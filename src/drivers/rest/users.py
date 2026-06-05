@@ -8,7 +8,11 @@ from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
 from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError, DuplicateEntityError
-from src.drivers.rest.exceptions import BadRequestException, NotFoundException
+from src.drivers.rest.exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+)
 from src.drivers.rest.schemas.users import (
     BalanceResponse,
     ChangePasswordRequest,
@@ -35,8 +39,6 @@ from src.use_cases.users.manage_users import (
     CreateUserInput,
     CreateUserUseCase,
     DeleteUserUseCase,
-    DepositInput,
-    DepositUseCase,
     GetUserUseCase,
     ListUsersUseCase,
     UpdateUserInput,
@@ -55,11 +57,17 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @inject
 async def register_user(
     data: UserRegister,
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: CreateUserUseCase = Depends(
         Provide[ApplicationContainer.create_user_use_case]
     ),
 ):
-    """Публичная регистрация пользователя (только telegram_id и пароль)"""
+    """Регистрация пользователя по валидированным Telegram Mini App данным."""
+    if data.telegram_id != telegram_id:
+        raise ForbiddenException(
+            detail="Registration telegram_id does not match auth user"
+        )
+
     logger.info(
         {
             "action": "register_user",
@@ -300,25 +308,10 @@ async def get_current_user(
 async def deposit(
     data: DepositRequest,
     telegram_id: int = Depends(get_telegram_current_user),
-    use_case: DepositUseCase = Depends(Provide[ApplicationContainer.deposit_use_case]),
 ):
-    """Пополнить баланс текущего пользователя"""
-    try:
-        input_data = DepositInput(
-            telegram_id=telegram_id,
-            amount=data.amount,
-            description=None,
-        )
-        user = await use_case.execute(input_data)
-        return BalanceResponse(
-            telegram_id=user.telegram_id,
-            balance=user.balance,
-            updated_at=user.updated_at,
-        )
-    except UserNotFoundException as e:
-        raise NotFoundException(detail=str(e))
-    except ValueError as e:
-        raise BadRequestException(detail=str(e))
+    """Пополнить баланс текущего пользователя."""
+    _ = (data, telegram_id)
+    raise ForbiddenException(detail="Self-service balance deposits are disabled")
 
 
 @router.post(

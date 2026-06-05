@@ -135,7 +135,6 @@ class CreateUserUseCase:
                 "data": {
                     "telegram_id": data.telegram_id,
                     "is_admin": is_admin,
-                    "admin_ids": settings.admin_telegram_ids,
                 },
             }
         )

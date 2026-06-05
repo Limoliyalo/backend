@@ -10,6 +10,7 @@ from fastapi.openapi.utils import get_openapi
 
 from src.adapters.database.session import session_manager
 from src.container import ApplicationContainer
+from src.core.settings import settings
 from src.infrastructure.messaging.daily_reward_scheduling import schedule_daily_reward_at
 from src.drivers.rest import (
     auth,
@@ -33,7 +34,7 @@ from src.drivers.rest import (
 )
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def create_app() -> FastAPI:
         }
 
         # Add security requirements to specific paths
-        public_endpoints = ["/register", "/catalog"]
+        public_endpoints = ["/catalog"]
 
         for path, path_item in openapi_schema["paths"].items():
             for _, operation in path_item.items():
@@ -124,22 +125,22 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        logger.debug(f"Request: {request.method} {request.url}")
+        logger.debug("Request: %s %s", request.method, request.url.path)
         try:
             response = await call_next(request)
-            logger.debug(f"Response status: {response.status_code}")
+            logger.debug("Response status: %s", response.status_code)
             return response
-        except Exception as e:
-            logger.exception(f"Request failed: {e}")
+        except Exception:
+            logger.exception("Unhandled request failure")
             return JSONResponse(
                 status_code=500,
-                content={"detail": f"Internal server error: {str(e)}"},
+                content={"detail": "Internal server error"},
             )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

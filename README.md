@@ -102,16 +102,18 @@ cp .env.example .env  # если примера нет, создайте .env в
 | `DB_HOST`      | `postgres`            | Хост PostgreSQL в сети Docker             |
 | `DB_PORT`      | `5432`                | Порт PostgreSQL внутри сети               |
 | `DB_NAME`      | `healthity_db`        | Имя базы данных                           |
-| `DB_USER`      | `postgres`            | Пользователь БД                           |
-| `DB_PASSWORD`  | `postgres`            | Пароль пользователя БД                    |
+| `DB_USER`      | `healthity`           | Пользователь БД                           |
+| `DB_PASSWORD`  | *обязательно*         | Пароль пользователя БД                    |
 | `DB_ECHO`      | `false`               | Логирование SQL запросов (для отладки)    |
+| `DB_HOST_PORT` | `5433`                | Loopback-порт PostgreSQL для локального compose |
 
 ### Redis
 | Переменная     | Значение по умолчанию | Назначение                               |
 |----------------|-----------------------|-------------------------------------------|
 | `REDIS_HOST`   | `redis`               | Хост Redis                                |
 | `REDIS_PORT`   | `6379`                | Порт Redis                                |
-| `REDIS_PASSWORD` | `None`              | Пароль Redis (опционально)                |
+| `REDIS_PASSWORD` | *обязательно*      | Пароль Redis                              |
+| `REDIS_HOST_PORT` | `6378`            | Loopback-порт Redis для локального compose |
 
 ### RabbitMQ
 | Переменная     | Значение по умолчанию | Назначение                               |
@@ -135,14 +137,16 @@ cp .env.example .env  # если примера нет, создайте .env в
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=healthity_db
-DB_USER=postgres
-DB_PASSWORD=postgres
+DB_USER=healthity
+DB_PASSWORD=change_me_strong_password
 DB_ECHO=false
+DB_HOST_PORT=5433
 
 # Redis
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=change_me_strong_password
+REDIS_HOST_PORT=6378
 
 # RabbitMQ
 RABBIT_HOST=rabbitmq
@@ -247,6 +251,7 @@ poetry run alembic downgrade -1
 **Регистрация пользователя:**
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/register \
+  -H "Authorization: Bearer {telegram_init_data}" \
   -H "Content-Type: application/json" \
   -d '{"telegram_id": 123456789, "password": "optional_password"}'
 ```

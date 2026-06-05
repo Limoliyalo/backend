@@ -34,7 +34,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "invalid_username",
-                "data": {"username": credentials.username},
+                "data": {"username_numeric": False},
             }
         )
         raise UnauthorizedException(
@@ -49,7 +49,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "user_not_found",
-                "data": {"telegram_id": telegram_id},
+                "data": {"username_numeric": True},
             }
         )
         raise UnauthorizedException(
@@ -62,7 +62,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "user_not_found",
-                "data": {"telegram_id": telegram_id},
+                "data": {"username_numeric": True},
             }
         )
         raise UnauthorizedException(
@@ -70,22 +70,12 @@ async def admin_user_provider(
             headers={"WWW-Authenticate": "Basic"},
         )
 
-    if not user.is_admin:
-        logger.warning(
-            {
-                "action": "admin_auth",
-                "stage": "not_admin",
-                "data": {"telegram_id": telegram_id},
-            }
-        )
-        raise ForbiddenException(detail="Access denied: admin privileges required")
-
     if not user.password_hash:
         logger.warning(
             {
                 "action": "admin_auth",
                 "stage": "no_password_set",
-                "data": {"telegram_id": telegram_id},
+                "data": {"username_numeric": True},
             }
         )
         raise UnauthorizedException(
@@ -98,7 +88,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "wrong_password",
-                "data": {"telegram_id": telegram_id},
+                "data": {"username_numeric": True},
             }
         )
         raise UnauthorizedException(
@@ -106,11 +96,21 @@ async def admin_user_provider(
             headers={"WWW-Authenticate": "Basic"},
         )
 
+    if not user.is_admin:
+        logger.warning(
+            {
+                "action": "admin_auth",
+                "stage": "not_admin",
+                "data": {"username_numeric": True},
+            }
+        )
+        raise ForbiddenException(detail="Access denied: admin privileges required")
+
     logger.info(
         {
             "action": "admin_auth",
             "stage": "success",
-            "data": {"telegram_id": telegram_id},
+            "data": {"username_numeric": True},
         }
     )
     return telegram_id

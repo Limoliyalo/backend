@@ -108,9 +108,6 @@ class DailyProgressUserCreate(BaseModel):
     """Схема для создания прогресса пользователем (без character_id)"""
 
     date: datetime = Field(..., description="Date of progress")
-    experience_gained: int = Field(
-        default=0, ge=0, description="Experience gained must be non-negative"
-    )
     mood_average: str | None = Field(None, max_length=50, description="Mood average")
     behavior_index: int | None = Field(
         None, ge=0, description="Behavior index must be non-negative"

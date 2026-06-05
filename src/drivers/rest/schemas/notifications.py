@@ -3,16 +3,27 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 
 
+MAX_NOTIFICATION_INTERVAL_MINUTES = 24 * 60
+
+
 class StartNotificationRequest(BaseModel):
     notification_time: int = Field(
-        ..., gt=0, description="Notification interval in minutes (must be > 0)"
+        ...,
+        gt=0,
+        le=MAX_NOTIFICATION_INTERVAL_MINUTES,
+        description="Notification interval in minutes (1-1440)",
     )
 
     @field_validator("notification_time")
     @classmethod
-    def must_be_positive(cls, v: int) -> int:
+    def must_be_in_supported_range(cls, v: int) -> int:
         if v <= 0:
             raise ValueError("notification_time must be a positive integer")
+        if v > MAX_NOTIFICATION_INTERVAL_MINUTES:
+            raise ValueError(
+                "notification_time must not exceed "
+                f"{MAX_NOTIFICATION_INTERVAL_MINUTES} minutes"
+            )
         return v
 
 
