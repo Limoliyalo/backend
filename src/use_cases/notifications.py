@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class StartNotificationsInput:
     user_id: int
     interval_minutes: int
+    notification_message: str | None = None
 
 
 @dataclass
@@ -31,6 +32,8 @@ class StartNotificationsResult:
     interval_minutes: int
     schedule_id: str
     is_active: bool
+    notification_message: str | None
+    next_run_at: datetime
 
 
 class StartNotificationsUseCase:
@@ -72,6 +75,8 @@ class StartNotificationsUseCase:
             user_id=data.user_id,
             interval_minutes=data.interval_minutes,
             schedule_id=schedule_id,
+            notification_message=data.notification_message,
+            next_run_at=first_at,
         )
 
         logger.info(
@@ -86,6 +91,8 @@ class StartNotificationsUseCase:
             interval_minutes=data.interval_minutes,
             schedule_id=schedule_id,
             is_active=True,
+            notification_message=data.notification_message,
+            next_run_at=first_at,
         )
 
 
@@ -147,6 +154,8 @@ class NotificationStatusResult:
     is_active: bool
     interval_minutes: int | None
     schedule_id: str | None
+    notification_message: str | None
+    next_run_at: datetime | None
     last_sent_at: datetime | None
 
 
@@ -159,6 +168,8 @@ class GetNotificationStatusUseCase:
                 is_active=False,
                 interval_minutes=None,
                 schedule_id=None,
+                notification_message=None,
+                next_run_at=None,
                 last_sent_at=None,
             )
 
@@ -167,10 +178,17 @@ class GetNotificationStatusUseCase:
         if raw_ts:
             last_sent_at = datetime.fromisoformat(raw_ts)
 
+        next_run_at: datetime | None = None
+        raw_next_run_at = data.get("next_run_at")
+        if raw_next_run_at:
+            next_run_at = datetime.fromisoformat(raw_next_run_at)
+
         return NotificationStatusResult(
             user_id=user_id,
             is_active=data.get("is_active", False),
             interval_minutes=data.get("interval_minutes"),
             schedule_id=data.get("schedule_id"),
+            notification_message=data.get("notification_message"),
+            next_run_at=next_run_at,
             last_sent_at=last_sent_at,
         )

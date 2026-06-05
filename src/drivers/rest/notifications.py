@@ -42,6 +42,7 @@ async def start_notifications(
             StartNotificationsInput(
                 user_id=telegram_id,
                 interval_minutes=data.notification_time,
+                notification_message=data.notification_message,
             )
         )
     except ValueError as exc:
@@ -52,6 +53,8 @@ async def start_notifications(
         interval_minutes=result.interval_minutes,
         schedule_id=result.schedule_id,
         is_active=result.is_active,
+        notification_message=result.notification_message,
+        next_run_at=result.next_run_at,
     )
 
 
@@ -90,5 +93,7 @@ async def get_notification_status(
         is_active=result.is_active,
         interval_minutes=result.interval_minutes,
         schedule_id=result.schedule_id,
+        notification_message=result.notification_message,
+        next_run_at=result.next_run_at,
         last_sent_at=result.last_sent_at,
     )

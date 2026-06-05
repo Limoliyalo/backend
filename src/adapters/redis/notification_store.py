@@ -17,6 +17,8 @@ async def set_user_notification_settings(
     user_id: int,
     interval_minutes: int,
     schedule_id: str,
+    notification_message: str | None,
+    next_run_at: datetime,
 ) -> None:
     """Persist subscription state for a user. Overwrites any previous entry."""
     redis = get_redis_client()
@@ -24,6 +26,8 @@ async def set_user_notification_settings(
         "is_active": True,
         "interval_minutes": interval_minutes,
         "schedule_id": schedule_id,
+        "notification_message": notification_message,
+        "next_run_at": next_run_at.isoformat(),
         "last_sent_at": None,
     }
     await redis.set(_key(user_id), json.dumps(payload), ex=NOTIFICATION_KEY_TTL)
@@ -50,13 +54,18 @@ async def deactivate_user_notifications(user_id: int) -> None:
     logger.info("Notifications deactivated for user %s", user_id)
 
 
-async def update_schedule_id(user_id: int, schedule_id: str) -> None:
-    """Update only schedule_id after the worker chains the next one-shot schedule."""
+async def update_schedule_id(
+    user_id: int,
+    schedule_id: str,
+    next_run_at: datetime,
+) -> None:
+    """Update the active one-shot schedule id and its planned run time."""
     redis = get_redis_client()
     data = await get_user_notification_settings(user_id)
     if data is None:
         return
     data["schedule_id"] = schedule_id
+    data["next_run_at"] = next_run_at.isoformat()
     await redis.set(_key(user_id), json.dumps(data), ex=NOTIFICATION_KEY_TTL)
 
 
