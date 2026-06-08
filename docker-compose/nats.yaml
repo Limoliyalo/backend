@@ -5,8 +5,8 @@ services:
     # -js enables JetStream — required for PullBasedJetStreamBroker
     command: ["--jetstream", "--store_dir=/data"]
     ports:
-      - "127.0.0.1:${NATS_PORT:-4222}:4222"   # client connections
-      - "127.0.0.1:${NATS_MONITOR_PORT:-8222}:8222"  # HTTP monitoring endpoint
+      - "${NATS_PORT:-4222}:4222"   # client connections
+      - "${NATS_MONITOR_PORT:-8222}:8222"  # HTTP monitoring endpoint
     volumes:
       - nats_data:/data
     networks:

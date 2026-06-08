@@ -34,7 +34,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "invalid_username",
-                "data": {"username_numeric": False},
+                "data": {"username": credentials.username},
             }
         )
         raise UnauthorizedException(
@@ -49,7 +49,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "user_not_found",
-                "data": {"username_numeric": True},
+                "data": {"telegram_id": telegram_id},
             }
         )
         raise UnauthorizedException(
@@ -62,33 +62,7 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "user_not_found",
-                "data": {"username_numeric": True},
-            }
-        )
-        raise UnauthorizedException(
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
-    if not user.password_hash:
-        logger.warning(
-            {
-                "action": "admin_auth",
-                "stage": "no_password_set",
-                "data": {"username_numeric": True},
-            }
-        )
-        raise UnauthorizedException(
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
-    if not password_hasher.verify_password(credentials.password, user.password_hash):
-        logger.warning(
-            {
-                "action": "admin_auth",
-                "stage": "wrong_password",
-                "data": {"username_numeric": True},
+                "data": {"telegram_id": telegram_id},
             }
         )
         raise UnauthorizedException(
@@ -101,16 +75,42 @@ async def admin_user_provider(
             {
                 "action": "admin_auth",
                 "stage": "not_admin",
-                "data": {"username_numeric": True},
+                "data": {"telegram_id": telegram_id},
             }
         )
         raise ForbiddenException(detail="Access denied: admin privileges required")
+
+    if not user.password_hash:
+        logger.warning(
+            {
+                "action": "admin_auth",
+                "stage": "no_password_set",
+                "data": {"telegram_id": telegram_id},
+            }
+        )
+        raise UnauthorizedException(
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    if not password_hasher.verify_password(credentials.password, user.password_hash):
+        logger.warning(
+            {
+                "action": "admin_auth",
+                "stage": "wrong_password",
+                "data": {"telegram_id": telegram_id},
+            }
+        )
+        raise UnauthorizedException(
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
     logger.info(
         {
             "action": "admin_auth",
             "stage": "success",
-            "data": {"username_numeric": True},
+            "data": {"telegram_id": telegram_id},
         }
     )
     return telegram_id

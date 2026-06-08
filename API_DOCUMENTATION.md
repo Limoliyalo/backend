@@ -59,6 +59,7 @@ endpoints still require `Authorization: Bearer {telegram_init_data}`.
   "telegram_id": 123456789,
   "is_active": true,
   "balance": 0,
+  "password_hash": "...",
   "created_at": "2025-10-12T12:00:00Z",
   "updated_at": "2025-10-12T12:00:00Z"
 }
@@ -141,6 +142,7 @@ Authorization: Bearer {telegram_init_data}
   "telegram_id": 123456789,
   "is_active": true,
   "balance": 1000,
+  "password_hash": "...",
   "created_at": "2025-10-12T12:00:00Z",
   "updated_at": "2025-10-12T12:00:00Z"
 }
@@ -156,8 +158,6 @@ Content-Type: application/json
   "amount": 100
 }
 ```
-
-**Response:** `403 Forbidden`. Самостоятельное начисление баланса отключено; баланс меняется только серверной бизнес-логикой или админскими операциями.
 
 ### 💸 Списать средства с баланса
 ```http
@@ -1300,12 +1300,12 @@ Content-Type: application/json
 
 {
   "date": "2025-10-12T00:00:00Z",
+  "experience_gained": 50,
   "mood_average": "happy",
   "behavior_index": 85
 }
 ```
 
-**Примечание:** пользовательский endpoint не принимает `experience_gained`; опыт пересчитывается сервером из активностей или задается через админские endpoints.
 **Примечание:** `mood_average` может быть: `neutral`, `happy`, `sad`, `angry`, `bored`.
 
 ### 🔧 Админские эндпоинты

@@ -86,16 +86,6 @@ class Settings(BaseSettings):
     nats_url: str = "nats://localhost:4222"
 
     application_admin_telegram_ids: str = ""
-    cors_allowed_origins: str = (
-        "https://healthity.ru,"
-        "https://healthity.web.app,"
-        "https://healthity.firebaseapp.com,"
-        "http://localhost:3000,"
-        "http://localhost:3010,"
-        "http://127.0.0.1:3000,"
-        "http://127.0.0.1:3010"
-    )
-    log_level: str = "INFO"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -159,15 +149,6 @@ class Settings(BaseSettings):
             ]
         except ValueError:
             return []
-
-    @property
-    def cors_origins(self) -> list[str]:
-        """Parse CORS origins from a comma-separated environment variable."""
-        return [
-            origin.strip()
-            for origin in self.cors_allowed_origins.split(",")
-            if origin.strip()
-        ]
 
 
 @lru_cache

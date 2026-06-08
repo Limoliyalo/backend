@@ -2,12 +2,12 @@ import uuid
 from dataclasses import dataclass
 
 from src.domain.entities.healthity.characters import CharacterItem
+from src.domain.entities.healthity.transactions import Transaction
 from src.domain.exceptions import EntityNotFoundException
 from src.ports.repositories.healthity.catalog import ItemsRepository
-from src.ports.repositories.healthity.characters import (
-    CharacterItemsRepository,
-    CharactersRepository,
-)
+from src.ports.repositories.healthity.characters import CharacterItemsRepository
+from src.ports.repositories.healthity.transactions import TransactionsRepository
+from src.ports.repositories.healthity.users import UsersRepository
 
 
 @dataclass
@@ -50,7 +50,6 @@ class PurchaseItemUseCase:
             item_id=data.item_id,
             is_active=data.is_active,
             is_favorite=data.is_favorite,
-            is_purchased=True,
         )
         return await self._character_items_repository.add(item)
 
@@ -188,11 +187,13 @@ class PurchaseItemWithBalanceUseCase:
         self,
         character_items_repository: CharacterItemsRepository,
         items_repository: ItemsRepository,
-        characters_repository: CharactersRepository,
+        users_repository: UsersRepository,
+        transactions_repository: TransactionsRepository,
     ) -> None:
         self._character_items_repository = character_items_repository
         self._items_repository = items_repository
-        self._characters_repository = characters_repository
+        self._users_repository = users_repository
+        self._transactions_repository = transactions_repository
 
     async def execute(self, data: PurchaseItemWithBalanceInput) -> CharacterItem:
 
@@ -204,20 +205,59 @@ class PurchaseItemWithBalanceUseCase:
         if not item.is_available:
             raise ValueError("Item is not available for purchase")
 
-        character = await self._characters_repository.get_by_id(data.character_id)
-        if character is None:
-            raise EntityNotFoundException(f"Character {data.character_id} not found")
+        # Проверяем, есть ли уже запись об этом предмете
+        existing_items = await self._character_items_repository.list_for_character(
+            data.character_id
+        )
+        existing_item = next(
+            (ci for ci in existing_items if ci.item_id == data.item_id), None
+        )
 
-        if character.user_tg_id != data.user_tg_id:
-            raise ValueError("Character does not belong to user")
+        # Получаем пользователя и проверяем баланс
+        user = await self._users_repository.get_by_telegram_id(data.user_tg_id)
+        if user is None:
+            raise EntityNotFoundException(f"User {data.user_tg_id} not found")
 
-        if character.level < item.required_level:
-            raise ValueError(f"Item requires level {item.required_level}")
+        # Проверяем достаточность средств
+        if user.balance < item.cost:
+            raise ValueError(
+                f"Insufficient funds. Required: {item.cost}, Available: {user.balance}"
+            )
 
-        return await self._character_items_repository.purchase_with_balance(
+        # Если предмет уже есть в избранном, просто помечаем как купленный
+        if existing_item:
+            if existing_item.is_purchased:
+                raise ValueError("Item already purchased")
+            existing_item.is_purchased = True
+            updated_item = await self._character_items_repository.update(existing_item)
+            # Списываем деньги с баланса пользователя
+            user.withdraw(item.cost)
+            updated_user = await self._users_repository.update(user)
+            created_item = updated_item
+        else:
+            # Списываем деньги с баланса пользователя
+            user.withdraw(item.cost)
+            updated_user = await self._users_repository.update(user)
+
+            character_item = CharacterItem(
+                id=uuid.uuid4(),
+                character_id=data.character_id,
+                item_id=data.item_id,
+                is_active=False,
+                is_favorite=False,
+                is_purchased=True,
+            )
+            created_item = await self._character_items_repository.add(character_item)
+
+        transaction = Transaction(
+            id=uuid.uuid4(),
             user_tg_id=data.user_tg_id,
-            character_id=data.character_id,
-            item_id=data.item_id,
-            cost=item.cost,
+            amount=-item.cost,
+            balance_after=updated_user.balance,
+            type="purchase_item",
+            related_item_id=data.item_id,
             description=f"Покупка предмета: {item.name}",
         )
+        await self._transactions_repository.add(transaction)
+
+        return created_item

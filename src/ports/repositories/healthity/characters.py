@@ -56,18 +56,6 @@ class CharacterItemsRepository(ABC):
     async def remove(self, character_item_id: uuid.UUID) -> None:
         raise NotImplementedError
 
-    @abstractmethod
-    async def purchase_with_balance(
-        self,
-        *,
-        user_tg_id: int,
-        character_id: uuid.UUID,
-        item_id: uuid.UUID,
-        cost: int,
-        description: str,
-    ) -> CharacterItem:
-        raise NotImplementedError
-
 
 class CharacterBackgroundsRepository(ABC):
     @abstractmethod
@@ -96,18 +84,6 @@ class CharacterBackgroundsRepository(ABC):
 
     @abstractmethod
     async def remove(self, character_background_id: uuid.UUID) -> None:
-        raise NotImplementedError
-
-    @abstractmethod
-    async def purchase_with_balance(
-        self,
-        *,
-        user_tg_id: int,
-        character_id: uuid.UUID,
-        background_id: uuid.UUID,
-        cost: int,
-        description: str,
-    ) -> CharacterBackground:
         raise NotImplementedError
 
 

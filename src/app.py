@@ -10,7 +10,6 @@ from fastapi.openapi.utils import get_openapi
 
 from src.adapters.database.session import session_manager
 from src.container import ApplicationContainer
-from src.core.settings import settings
 from src.infrastructure.messaging.daily_reward_scheduling import schedule_daily_reward_at
 from src.drivers.rest import (
     auth,
@@ -35,7 +34,7 @@ from src.drivers.rest import (
 )
 
 logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -126,22 +125,22 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        logger.debug("Request: %s %s", request.method, request.url.path)
+        logger.debug(f"Request: {request.method} {request.url}")
         try:
             response = await call_next(request)
-            logger.debug("Response status: %s", response.status_code)
+            logger.debug(f"Response status: {response.status_code}")
             return response
-        except Exception:
-            logger.exception("Unhandled request failure")
+        except Exception as e:
+            logger.exception(f"Request failed: {e}")
             return JSONResponse(
                 status_code=500,
-                content={"detail": "Internal server error"},
+                content={"detail": f"Internal server error: {str(e)}"},
             )
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=False,
+        allow_origins=["*"],
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )

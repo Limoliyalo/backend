@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_PORT: ${DB_PORT}
     ports:
-      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -19,9 +19,8 @@ services:
   redis:
     image: redis:7.4.0
     container_name: healthity-redis
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
     ports:
-      - "127.0.0.1:${REDIS_HOST_PORT:-6378}:6379"
+      - "6378:6379"
     volumes:
       - redis_data:/data
     networks:

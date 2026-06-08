@@ -54,8 +54,6 @@ class CharacterItem:
     is_purchased: bool = False
 
     def equip(self) -> None:
-        if not self.is_purchased:
-            raise ValueError("Item must be purchased before it can be equipped")
         self.is_active = True
 
     def unequip(self) -> None:
@@ -75,8 +73,6 @@ class CharacterBackground:
     is_purchased: bool = False
 
     def activate(self) -> None:
-        if not self.is_purchased:
-            raise ValueError("Background must be purchased before it can be activated")
         self.is_active = True
 
     def deactivate(self) -> None:

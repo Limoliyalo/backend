@@ -273,7 +273,7 @@ async def create_or_update_daily_progress(
         input_data = CreateDailyProgressInput(
             character_id=character.id,
             date=data.date,
-            experience_gained=0,
+            experience_gained=data.experience_gained,
             mood_average=data.mood_average,
             behavior_index=data.behavior_index,
         )

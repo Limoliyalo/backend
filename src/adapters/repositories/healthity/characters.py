@@ -11,8 +11,6 @@ from src.adapters.database.models.characters import (
 )
 from src.adapters.database.models.catalog import ItemModel, BackgroundModel
 from src.adapters.database.uow import AbstractUnitOfWork
-from src.adapters.database.models.transactions import TransactionModel
-from src.adapters.database.models.user import UserModel
 from src.adapters.repositories.base import SQLAlchemyRepository
 from src.adapters.repositories.exceptions import RepositoryError
 from src.domain.entities.healthity.characters import (
@@ -176,73 +174,6 @@ class SQLAlchemyCharacterItemsRepository(
                 raise RepositoryError("Character item not found")
             await uow.session.delete(model)
 
-    async def purchase_with_balance(
-        self,
-        *,
-        user_tg_id: int,
-        character_id: uuid.UUID,
-        item_id: uuid.UUID,
-        cost: int,
-        description: str,
-    ) -> CharacterItem:
-        async with self._uow() as uow:
-            user_result = await uow.session.execute(
-                select(UserModel)
-                .where(UserModel.tg_id == user_tg_id)
-                .with_for_update()
-            )
-            user_model = user_result.scalar_one_or_none()
-            if user_model is None:
-                raise RepositoryError("User does not exist")
-            if user_model.balance < cost:
-                raise ValueError(
-                    f"Insufficient funds. Required: {cost}, "
-                    f"Available: {user_model.balance}"
-                )
-
-            item_result = await uow.session.execute(
-                select(CharacterItemModel)
-                .where(
-                    CharacterItemModel.character_id == character_id,
-                    CharacterItemModel.item_id == item_id,
-                )
-                .with_for_update()
-            )
-            item_model = item_result.scalar_one_or_none()
-            if item_model is not None and item_model.is_purchased:
-                raise ValueError("Item already purchased")
-
-            user_model.balance -= cost
-
-            if item_model is None:
-                item_model = CharacterItemModel(
-                    id=uuid.uuid4(),
-                    character_id=character_id,
-                    item_id=item_id,
-                    is_active=False,
-                    is_favorite=False,
-                    is_purchased=True,
-                )
-                uow.session.add(item_model)
-            else:
-                item_model.is_purchased = True
-
-            uow.session.add(
-                TransactionModel(
-                    id=uuid.uuid4(),
-                    user_tg_id=user_tg_id,
-                    amount=-cost,
-                    balance_after=user_model.balance,
-                    type="purchase_item",
-                    related_item_id=item_id,
-                    description=description,
-                )
-            )
-
-            await uow.session.flush()
-            await uow.session.refresh(item_model)
-            return self._to_domain(item_model)
-
     @staticmethod
     def _to_domain(model: CharacterItemModel) -> CharacterItem:
         return CharacterItem(
@@ -334,73 +265,6 @@ class SQLAlchemyCharacterBackgroundsRepository(
             if model is None:
                 raise RepositoryError("Character background not found")
             await uow.session.delete(model)
-
-    async def purchase_with_balance(
-        self,
-        *,
-        user_tg_id: int,
-        character_id: uuid.UUID,
-        background_id: uuid.UUID,
-        cost: int,
-        description: str,
-    ) -> CharacterBackground:
-        async with self._uow() as uow:
-            user_result = await uow.session.execute(
-                select(UserModel)
-                .where(UserModel.tg_id == user_tg_id)
-                .with_for_update()
-            )
-            user_model = user_result.scalar_one_or_none()
-            if user_model is None:
-                raise RepositoryError("User does not exist")
-            if user_model.balance < cost:
-                raise ValueError(
-                    f"Insufficient funds. Required: {cost}, "
-                    f"Available: {user_model.balance}"
-                )
-
-            background_result = await uow.session.execute(
-                select(CharacterBackgroundModel)
-                .where(
-                    CharacterBackgroundModel.character_id == character_id,
-                    CharacterBackgroundModel.background_id == background_id,
-                )
-                .with_for_update()
-            )
-            background_model = background_result.scalar_one_or_none()
-            if background_model is not None and background_model.is_purchased:
-                raise ValueError("Background already purchased")
-
-            user_model.balance -= cost
-
-            if background_model is None:
-                background_model = CharacterBackgroundModel(
-                    id=uuid.uuid4(),
-                    character_id=character_id,
-                    background_id=background_id,
-                    is_active=False,
-                    is_favorite=False,
-                    is_purchased=True,
-                )
-                uow.session.add(background_model)
-            else:
-                background_model.is_purchased = True
-
-            uow.session.add(
-                TransactionModel(
-                    id=uuid.uuid4(),
-                    user_tg_id=user_tg_id,
-                    amount=-cost,
-                    balance_after=user_model.balance,
-                    type="purchase_background",
-                    related_background_id=background_id,
-                    description=description,
-                )
-            )
-
-            await uow.session.flush()
-            await uow.session.refresh(background_model)
-            return self._to_domain(background_model)
 
     @staticmethod
     def _to_domain(model: CharacterBackgroundModel) -> CharacterBackground:
