@@ -42,6 +42,7 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(UserBase):
+    password_hash: str | None = None
     created_at: datetime
     updated_at: datetime
 
