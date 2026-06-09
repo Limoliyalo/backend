@@ -3,7 +3,6 @@ import uuid
 from dataclasses import dataclass
 
 from src.core.security import PasswordHasher
-from src.core.settings import get_settings
 from src.domain.entities.healthity.transactions import Transaction
 from src.domain.entities.healthity.users import User
 from src.domain.exceptions import UserNotFoundException
@@ -16,6 +15,7 @@ class CreateUserInput:
     telegram_id: int
     password: str | None = None
     is_active: bool = True
+    is_admin: bool = False
     balance: int = 0
 
 
@@ -124,17 +124,13 @@ class CreateUserUseCase:
             }
         )
 
-        # Check if user should be admin based on telegram_id
-        settings = get_settings()
-        is_admin = data.telegram_id in settings.admin_telegram_ids
-
         self.logger.debug(
             {
                 "action": "CreateUserUseCase.execute",
                 "stage": "admin_check",
                 "data": {
                     "telegram_id": data.telegram_id,
-                    "is_admin": is_admin,
+                    "is_admin": data.is_admin,
                 },
             }
         )
@@ -143,7 +139,7 @@ class CreateUserUseCase:
             telegram_id=telegram_id,
             password_hash=password_hash,
             is_active=data.is_active,
-            is_admin=is_admin,
+            is_admin=data.is_admin,
             balance=data.balance,
         )
 

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query, status
 from src.container import ApplicationContainer
 from src.core.auth.admin import admin_user_provider
 from src.core.auth.dependencies import get_telegram_current_user
+from src.core.settings import get_settings
 from src.domain.exceptions import EntityNotFoundException, UserNotFoundException
 from src.adapters.repositories.exceptions import RepositoryError, DuplicateEntityError
 from src.drivers.rest.exceptions import (
@@ -15,7 +16,6 @@ from src.drivers.rest.exceptions import (
 from src.drivers.rest.schemas.users import (
     BalanceResponse,
     ChangePasswordRequest,
-    DepositRequest,
     UserCreate,
     UserDelete,
     UserRegister,
@@ -38,8 +38,6 @@ from src.use_cases.users.manage_users import (
     CreateUserInput,
     CreateUserUseCase,
     DeleteUserUseCase,
-    DepositInput,
-    DepositUseCase,
     GetUserUseCase,
     ListUsersUseCase,
     UpdateUserInput,
@@ -58,11 +56,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @inject
 async def register_user(
     data: UserRegister,
+    telegram_id: int = Depends(get_telegram_current_user),
     use_case: CreateUserUseCase = Depends(
         Provide[ApplicationContainer.create_user_use_case]
     ),
 ):
-    """Регистрация пользователя по Telegram ID."""
+    """Регистрация пользователя по подтвержденному Telegram ID."""
 
     logger.info(
         {
@@ -73,10 +72,14 @@ async def register_user(
     )
 
     try:
+        if data.telegram_id != telegram_id:
+            raise BadRequestException(detail="Telegram user mismatch")
+
         input_data = CreateUserInput(
-            telegram_id=data.telegram_id,
+            telegram_id=telegram_id,
             password=data.password,
             is_active=True,
+            is_admin=telegram_id in get_settings().admin_telegram_ids,
             balance=0,
         )
         user = await use_case.execute(input_data)
@@ -209,6 +212,7 @@ async def create_user(
             telegram_id=data.telegram_id,
             password=data.password,
             is_active=data.is_active,
+            is_admin=data.telegram_id in get_settings().admin_telegram_ids,
             balance=data.balance,
         )
         user = await use_case.execute(input_data)
@@ -295,34 +299,6 @@ async def get_current_user(
         return UserResponse.model_validate(user)
     except UserNotFoundException as e:
         raise NotFoundException(detail=str(e))
-
-
-@router.post(
-    "/me/deposit", response_model=BalanceResponse, status_code=status.HTTP_200_OK
-)
-@inject
-async def deposit(
-    data: DepositRequest,
-    telegram_id: int = Depends(get_telegram_current_user),
-    use_case: DepositUseCase = Depends(Provide[ApplicationContainer.deposit_use_case]),
-):
-    """Пополнить баланс текущего пользователя"""
-    try:
-        input_data = DepositInput(
-            telegram_id=telegram_id,
-            amount=data.amount,
-            description=None,
-        )
-        user = await use_case.execute(input_data)
-        return BalanceResponse(
-            telegram_id=user.telegram_id,
-            balance=user.balance,
-            updated_at=user.updated_at,
-        )
-    except UserNotFoundException as e:
-        raise NotFoundException(detail=str(e))
-    except ValueError as e:
-        raise BadRequestException(detail=str(e))
 
 
 @router.post(

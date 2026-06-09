@@ -67,7 +67,5 @@ class FriendInfoResponse(BaseModel):
     character_items: list[dict] = Field(default_factory=list)
     character_backgrounds: list[dict] = Field(default_factory=list)
     base_activities: list[dict] = Field(default_factory=list)
-    mood_history: list[dict] = Field(default_factory=list)
-    transactions: list[dict] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
