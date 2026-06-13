@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     notifications_access_token: str | None = None
 
     nats_url: str = "nats://localhost:4222"
+    open_food_facts_base_url: str = "https://world.openfoodfacts.org"
+    open_food_facts_user_agent: str = "Healthity/1.0 (https://healthity.ru)"
 
     application_admin_telegram_ids: str = ""
 
