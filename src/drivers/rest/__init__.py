@@ -11,6 +11,7 @@ __all__ = [
     "daily_activities",
     "daily_progress",
     "food_entries",
+    "food_products",
     "items",
     "item_categories",
     "item_background_positions",

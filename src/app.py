@@ -24,6 +24,7 @@ from src.drivers.rest import (
     daily_activities,
     daily_progress,
     food_entries,
+    food_products,
     mood_history,
     user_friends,
     character_items,
@@ -158,6 +159,7 @@ def create_app() -> FastAPI:
     app.include_router(daily_activities.router, prefix="/api/v1")
     app.include_router(daily_progress.router, prefix="/api/v1")
     app.include_router(food_entries.router, prefix="/api/v1")
+    app.include_router(food_products.router, prefix="/api/v1")
     app.include_router(mood_history.router, prefix="/api/v1")
     app.include_router(user_friends.router, prefix="/api/v1")
     app.include_router(character_items.router, prefix="/api/v1")

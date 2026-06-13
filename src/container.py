@@ -35,6 +35,7 @@ from src.core.auth.providers import (
 )
 from src.core.settings import settings
 from src.core.security import PasswordHasher, TokenHasher
+from src.infrastructure.open_food_facts.client import OpenFoodFactsClient
 from src.use_cases.users.manage_users import (
     GetUserUseCase,
     CreateUserUseCase,
@@ -116,6 +117,9 @@ from src.use_cases.food_entries.manage_food_entries import (
     DeleteFoodEntryUseCase,
     ListFoodEntriesForDayUseCase,
     UpdateFoodEntryUseCase,
+)
+from src.use_cases.food_products.manage_food_products import (
+    LookupFoodProductByBarcodeUseCase,
 )
 from src.use_cases.rewards.daily_reward import RunDailyRewardsUseCase
 from src.use_cases.daily_progress.manage_daily_progress import (
@@ -247,6 +251,11 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
     food_entries_repository = providers.Factory(
         SQLAlchemyFoodEntriesRepository, uow_factory=unit_of_work.provider
+    )
+    open_food_facts_client = providers.Factory(
+        OpenFoodFactsClient,
+        base_url=settings_provider.provided.open_food_facts_base_url,
+        user_agent=settings_provider.provided.open_food_facts_user_agent,
     )
     base_character_activities_repository = providers.Factory(
         SQLAlchemyBaseCharacterActivitiesRepository, uow_factory=unit_of_work.provider
@@ -518,6 +527,10 @@ class ApplicationContainer(containers.DeclarativeContainer):
         daily_activities_repository=daily_activities_repository,
         base_activities_repository=base_character_activities_repository,
         activity_types_repository=activity_types_repository,
+    )
+    lookup_food_product_by_barcode_use_case = providers.Factory(
+        LookupFoodProductByBarcodeUseCase,
+        source=open_food_facts_client,
     )
     run_daily_rewards_use_case = providers.Factory(
         RunDailyRewardsUseCase,
