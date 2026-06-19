@@ -23,7 +23,7 @@ async def schedule_notification_at(
     """
     Enqueue a single fire of send_notification_task at ``run_at`` (timezone-aware UTC).
     """
-    kicker = AsyncKicker(NOTIFICATION_TASK_NAME, broker, {})
+    kicker: AsyncKicker[..., None] = AsyncKicker(NOTIFICATION_TASK_NAME, broker, {})
     await kicker.with_schedule_id(schedule_id).with_task_id(schedule_id).schedule_by_time(
         schedule_source,
         run_at,

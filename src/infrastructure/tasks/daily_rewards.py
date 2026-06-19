@@ -1,5 +1,4 @@
 import logging
-import uuid
 from datetime import datetime, timedelta, timezone
 
 from src.adapters.database.session import session_manager
@@ -11,7 +10,10 @@ from src.adapters.repositories.healthity import (
     SQLAlchemyTransactionsRepository,
     SQLAlchemyUsersRepository,
 )
-from src.infrastructure.messaging.daily_reward_scheduling import schedule_daily_reward_at
+from src.infrastructure.messaging.daily_reward_scheduling import (
+    daily_reward_schedule_id,
+    schedule_daily_reward_at,
+)
 from src.infrastructure.messaging.broker import broker
 from src.use_cases.rewards.daily_reward import RunDailyRewardsInput, RunDailyRewardsUseCase
 from src.use_cases.transactions.manage_transactions import (
@@ -60,7 +62,6 @@ async def daily_reward_task() -> None:
     await run_rewards_uc.execute(RunDailyRewardsInput(reward_date=reward_date))
 
     next_at = _next_midnight_utc(now)
-    schedule_id = f"daily_reward:{next_at.date().isoformat()}:{uuid.uuid4()}"
+    schedule_id = daily_reward_schedule_id(next_at)
     await schedule_daily_reward_at(next_at, schedule_id)
     logger.info("Scheduled next daily reward at %s (schedule_id=%s)", next_at.isoformat(), schedule_id)
-

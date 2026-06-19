@@ -8,13 +8,16 @@ from src.infrastructure.messaging.broker import broker, schedule_source
 DAILY_REWARD_TASK_NAME = "src.infrastructure.tasks.daily_rewards:daily_reward_task"
 
 
+def daily_reward_schedule_id(run_at: datetime) -> str:
+    return f"daily_reward:{run_at.date().isoformat()}"
+
+
 async def schedule_daily_reward_at(run_at: datetime, schedule_id: str) -> None:
     """
     Enqueue a single fire of daily_reward_task at ``run_at`` (timezone-aware UTC).
     """
-    kicker = AsyncKicker(DAILY_REWARD_TASK_NAME, broker, {})
+    kicker: AsyncKicker[..., None] = AsyncKicker(DAILY_REWARD_TASK_NAME, broker, {})
     await kicker.with_schedule_id(schedule_id).with_task_id(schedule_id).schedule_by_time(
         schedule_source,
         run_at,
     )
-
